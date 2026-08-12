@@ -1,5 +1,5 @@
 async function loadSession() {
-  const response = await fetch('/api/me');
+  const response = await fetch('/api/auth/me');
 
   if (!response.ok) {
     window.location.href = 'login.html';
@@ -11,7 +11,7 @@ async function loadSession() {
 }
 
 document.getElementById('logout-btn').addEventListener('click', async () => {
-  await fetch('/api/logout', { method: 'POST' });
+  await fetch('/api/auth/logout', { method: 'POST' });
   window.location.href = 'login.html';
 });
 

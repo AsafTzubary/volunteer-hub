@@ -1,6 +1,7 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const User = require('../../models/User');
+const { validateUsername, validatePassword } = require('../../utils/validators');
 
 const router = express.Router();
 
@@ -9,6 +10,16 @@ router.post('/register', async (req, res) => {
 
   if (!username || !password) {
     return res.status(400).json({ error: 'Username and password are required.' });
+  }
+
+  const usernameError = validateUsername(username);
+  if (usernameError) {
+    return res.status(400).json({ error: usernameError });
+  }
+
+  const passwordError = validatePassword(password);
+  if (passwordError) {
+    return res.status(400).json({ error: passwordError });
   }
 
   const existing = await User.findOne({ username });

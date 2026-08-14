@@ -8,6 +8,8 @@ async function loadSession() {
 
   const data = await response.json();
   document.getElementById('username-display').textContent = data.username;
+  document.getElementById('my-profile-link').href =
+    'profile.html?username=' + encodeURIComponent(data.username);
 }
 
 document.getElementById('logout-btn').addEventListener('click', async () => {

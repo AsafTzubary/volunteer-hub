@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Volunteer Hub - Edit Profile</title>
+  <link
+    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+    rel="stylesheet"
+  />
+  <link rel="stylesheet" href="../css/styles.css" />
+  <link rel="stylesheet" href="css/profile.css" />
+</head>
+<body class="bg-light">
+
+  <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+    <div class="container">
+      <a class="navbar-brand" href="../dashboard.html">Volunteer Hub</a>
+      <div class="d-flex gap-2 align-items-center">
+        <a id="my-profile-link" href="#" class="btn btn-outline-light btn-sm">My Profile</a>
+        <button id="logout-btn" class="btn btn-outline-light btn-sm">Log Out</button>
+      </div>
+    </div>
+  </nav>
+
+  <main class="container py-4">
+    <div class="row justify-content-center">
+      <div class="col-lg-6">
+
+        <div class="card shadow-sm p-4">
+          <h1 class="h5 mb-4">Edit Profile</h1>
+
+          <form id="edit-form" novalidate>
+
+            <div class="mb-3">
+              <label for="fullName" class="form-label">Full Name</label>
+              <input type="text" class="form-control" id="fullName" name="fullName" maxlength="60" />
+              <div class="invalid-feedback" id="fullName-error"></div>
+            </div>
+
+            <div class="mb-3">
+              <label for="email" class="form-label">Email</label>
+              <input type="email" class="form-control" id="email" name="email" />
+              <div class="invalid-feedback" id="email-error"></div>
+            </div>
+
+            <div class="mb-3">
+              <label for="city" class="form-label">City</label>
+              <input type="text" class="form-control" id="city" name="city" maxlength="60" />
+              <div class="invalid-feedback" id="city-error"></div>
+            </div>
+
+            <div class="mb-4">
+              <label for="interests" class="form-label">Interests</label>
+              <input type="text" class="form-control" id="interests" name="interests" placeholder="e.g. environment, education, animals" />
+              <div class="form-text">Comma-separated, up to 10 tags.</div>
+              <div class="invalid-feedback" id="interests-error"></div>
+            </div>
+
+            <div id="form-error" class="alert alert-danger d-none" role="alert"></div>
+
+            <div class="d-flex gap-2">
+              <button type="submit" class="btn btn-primary">Save Changes</button>
+              <a id="cancel-link" href="#" class="btn btn-outline-secondary">Cancel</a>
+            </div>
+
+          </form>
+        </div>
+
+      </div>
+    </div>
+  </main>
+
+  <footer class="text-center text-muted py-3 mt-4 border-top small">
+    &copy; 2025 Volunteer Hub
+  </footer>
+
+  <script src="js/edit.js"></script>
+</body>
+</html>

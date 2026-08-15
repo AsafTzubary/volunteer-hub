@@ -35,7 +35,7 @@ function formatDate(iso) {
 async function loadSession() {
   const res = await fetch('/api/auth/me');
   if (!res.ok) {
-    window.location.href = 'login.html';
+    window.location.href = '../login.html';
     return null;
   }
   return (await res.json()).username;
@@ -99,7 +99,7 @@ function renderFriends(friends) {
     li.innerHTML = `
       <div class="friend-avatar" style="background:${color}">${name[0].toUpperCase()}</div>
       <div>
-        <a href="profile.html?username=${encodeURIComponent(friend.username)}" class="text-decoration-none text-dark fw-semibold small">${name}</a>
+        <a href="index.html?username=${encodeURIComponent(friend.username)}" class="text-decoration-none text-dark fw-semibold small">${name}</a>
         ${friend.city ? `<div class="text-muted" style="font-size:0.72rem">${friend.city}</div>` : ''}
       </div>
     `;
@@ -127,11 +127,11 @@ async function init() {
   if (!sessionUsername) return;
 
   document.getElementById('my-profile-link').href =
-    'profile.html?username=' + encodeURIComponent(sessionUsername);
+    'index.html?username=' + encodeURIComponent(sessionUsername);
 
   document.getElementById('logout-btn').addEventListener('click', async () => {
     await fetch('/api/auth/logout', { method: 'POST' });
-    window.location.href = 'login.html';
+    window.location.href = '../login.html';
   });
 
   const username = targetUsername() || sessionUsername;

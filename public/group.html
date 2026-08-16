@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Volunteer Hub - Group</title>
+  <link
+    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+    rel="stylesheet"
+  />
+  <link rel="stylesheet" href="css/styles.css" />
+  <link rel="stylesheet" href="css/profile.css" />
+</head>
+<body class="bg-light">
+
+  <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+    <div class="container">
+      <a class="navbar-brand" href="dashboard.html">Volunteer Hub</a>
+      <div class="d-flex gap-2 align-items-center">
+        <a id="my-profile-link" href="#" class="btn btn-outline-light btn-sm">My Profile</a>
+        <button id="logout-btn" class="btn btn-outline-light btn-sm">Log Out</button>
+      </div>
+    </div>
+  </nav>
+
+  <main class="container py-4">
+
+    <div id="not-found" class="d-none">
+      <div class="alert alert-warning mt-4">Group not found.</div>
+    </div>
+
+    <div id="group-content" class="d-none">
+      <div class="row g-4">
+
+        <aside class="col-lg-4">
+          <div class="card shadow-sm p-4 mb-4">
+            <span id="group-category" class="interest-badge mb-2 align-self-start"></span>
+            <h1 id="group-name" class="h4 mb-1"></h1>
+            <p id="group-address" class="text-muted small mb-3"></p>
+
+            <div class="d-flex flex-column gap-2">
+              <a id="edit-group-btn" href="#" class="btn btn-primary btn-sm d-none">Edit Group</a>
+              <button id="delete-group-btn" class="btn btn-outline-danger btn-sm d-none" disabled>Delete Group</button>
+              <button id="join-group-btn" class="btn btn-success btn-sm d-none" disabled>Join Group</button>
+              <button id="leave-group-btn" class="btn btn-outline-secondary btn-sm d-none" disabled>Leave Group</button>
+            </div>
+          </div>
+
+          <div class="card shadow-sm p-3 mb-4">
+            <h2 class="h6 mb-2">Manager</h2>
+            <div id="manager-info"></div>
+          </div>
+
+          <div class="card shadow-sm p-3">
+            <h2 class="h6 mb-2">Members <span id="members-count" class="badge bg-secondary"></span></h2>
+            <ul id="members-list" class="list-unstyled mb-0"></ul>
+          </div>
+        </aside>
+
+        <section class="col-lg-8">
+
+          <div class="card shadow-sm p-3 mb-4">
+            <h2 class="h6 mb-2">About</h2>
+            <p id="group-description" class="mb-0"></p>
+          </div>
+
+          <div class="card shadow-sm p-3 mb-4">
+            <h2 class="h6 mb-3">Events</h2>
+            <div id="events-list">
+              <p class="text-muted small mb-0">No events scheduled yet.</p>
+            </div>
+          </div>
+
+          <div class="card shadow-sm p-3">
+            <h2 class="h6 mb-3">Posts</h2>
+            <div id="posts-list">
+              <p class="text-muted small mb-0">No posts yet.</p>
+            </div>
+          </div>
+
+        </section>
+      </div>
+    </div>
+
+  </main>
+
+  <footer class="text-center text-muted py-3 mt-4 border-top small">
+    &copy; 2025 Volunteer Hub
+  </footer>
+
+  <script src="js/group.js"></script>
+</body>
+</html>

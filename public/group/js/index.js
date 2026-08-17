@@ -1,12 +1,3 @@
-async function loadSession() {
-  const res = await fetch('/api/auth/me');
-  if (!res.ok) {
-    window.location.href = 'login.html';
-    return null;
-  }
-  return (await res.json()).username;
-}
-
 function targetGroupId() {
   return new URLSearchParams(window.location.search).get('id');
 }
@@ -14,9 +5,9 @@ function targetGroupId() {
 function personRow(person) {
   const name = person.fullName || person.username;
   return `
-    <div class="friend-avatar">${name[0].toUpperCase()}</div>
+    <div class="member-avatar">${name[0].toUpperCase()}</div>
     <div>
-      <a href="profile/index.html?username=${encodeURIComponent(person.username)}" class="text-decoration-none text-dark fw-semibold small">${name}</a>
+      <a href="${profileUrl(person.username)}" class="text-decoration-none text-dark fw-semibold small">${name}</a>
       ${person.city ? `<div class="text-muted" style="font-size:0.72rem">${person.city}</div>` : ''}
     </div>
   `;
@@ -24,7 +15,7 @@ function personRow(person) {
 
 function renderManager(manager) {
   const container = document.getElementById('manager-info');
-  container.className = 'friend-item';
+  container.className = 'member-item';
   container.innerHTML = personRow(manager);
 }
 
@@ -40,7 +31,7 @@ function renderMembers(members) {
   list.innerHTML = '';
   members.forEach((member) => {
     const li = document.createElement('li');
-    li.className = 'friend-item';
+    li.className = 'member-item';
     li.innerHTML = personRow(member);
     list.appendChild(li);
   });
@@ -49,7 +40,7 @@ function renderMembers(members) {
 function renderActionButtons(group) {
   if (group.isManager) {
     const editBtn = document.getElementById('edit-group-btn');
-    editBtn.href = 'edit-group.html?id=' + encodeURIComponent(group.id);
+    editBtn.href = '/group/edit.html?id=' + encodeURIComponent(group.id);
     editBtn.classList.remove('d-none');
     document.getElementById('delete-group-btn').classList.remove('d-none');
   } else if (group.isMember) {
@@ -75,13 +66,8 @@ async function init() {
   const sessionUsername = await loadSession();
   if (!sessionUsername) return;
 
-  document.getElementById('my-profile-link').href =
-    'profile/index.html?username=' + encodeURIComponent(sessionUsername);
-
-  document.getElementById('logout-btn').addEventListener('click', async () => {
-    await fetch('/api/auth/logout', { method: 'POST' });
-    window.location.href = 'login.html';
-  });
+  document.getElementById('my-profile-link').href = profileUrl(sessionUsername);
+  wireLogout();
 
   const groupId = targetGroupId();
   if (!groupId) {

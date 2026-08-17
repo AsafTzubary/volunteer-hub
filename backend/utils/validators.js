@@ -5,6 +5,14 @@ const USERNAME_REGEX = /^[A-Za-z0-9]+$/;
 const PASSWORD_MIN_LENGTH = 6;
 const PASSWORD_MAX_LENGTH = 64;
 
+const GROUP_NAME_MIN_LENGTH = 3;
+const GROUP_NAME_MAX_LENGTH = 60;
+const GROUP_DESCRIPTION_MAX_LENGTH = 500;
+const CATEGORY_MAX_LENGTH = 40;
+const ADDRESS_MAX_LENGTH = 120;
+
+
+
 function validateUsername(username) {
   if (username.length < USERNAME_MIN_LENGTH || username.length > USERNAME_MAX_LENGTH) {
     return `Username must be between ${USERNAME_MIN_LENGTH} and ${USERNAME_MAX_LENGTH} characters.`;
@@ -22,12 +30,67 @@ function validatePassword(password) {
   return null;
 }
 
+function validateGroupName(name) {
+  if (name.length < GROUP_NAME_MIN_LENGTH || name.length > GROUP_NAME_MAX_LENGTH) {
+    return `Group name must be between ${GROUP_NAME_MIN_LENGTH} and ${GROUP_NAME_MAX_LENGTH} characters.`;
+  }
+  return null;
+}
+
+function validateCategory(category) {
+  if (category.trim().length === 0 || category.length > CATEGORY_MAX_LENGTH) {
+    return `Category is required and must be at most ${CATEGORY_MAX_LENGTH} characters.`;
+  }
+  return null;
+}
+
+function validateGroupDescription(description) {
+  if (description.length > GROUP_DESCRIPTION_MAX_LENGTH) {
+    return `Description must be at most ${GROUP_DESCRIPTION_MAX_LENGTH} characters.`;
+  }
+  return null;
+}
+
+function validateAddress(address) {
+  if (address.length > ADDRESS_MAX_LENGTH) {
+    return `Address must be at most ${ADDRESS_MAX_LENGTH} characters.`;
+  }
+  return null;
+}
+
+function validateCoordinate(value, min, max, label) {
+  const number = Number(value);
+  if (Number.isNaN(number) || number < min || number > max) {
+    return `${label} must be a number between ${min} and ${max}.`;
+  }
+  return null;
+}
+
+function validateLatitude(value) {
+  return validateCoordinate(value, -90, 90, 'Latitude');
+}
+
+function validateLongitude(value) {
+  return validateCoordinate(value, -180, 180, 'Longitude');
+}
+
 module.exports = {
   USERNAME_MIN_LENGTH,
   USERNAME_MAX_LENGTH,
   USERNAME_REGEX,
   PASSWORD_MIN_LENGTH,
   PASSWORD_MAX_LENGTH,
+  GROUP_NAME_MIN_LENGTH,
+  GROUP_NAME_MAX_LENGTH,
+  GROUP_DESCRIPTION_MAX_LENGTH,
+  CATEGORY_MAX_LENGTH,
+  ADDRESS_MAX_LENGTH,
   validateUsername,
   validatePassword,
+  validateGroupName,
+  validateCategory,
+  validateGroupDescription,
+  validateAddress,
+  validateLatitude,
+  validateLongitude
 };

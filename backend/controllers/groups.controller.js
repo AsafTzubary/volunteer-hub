@@ -1,5 +1,14 @@
 const mongoose = require('mongoose');
 const Group = require('../models/Group');
+const User = require('../models/User');
+const {
+  validateGroupName,
+  validateCategory,
+  validateGroupDescription,
+  validateAddress,
+  validateLatitude,
+  validateLongitude,
+} = require('../utils/validators');
 
 async function getGroupDetails(req, res) {
   const { id } = req.params;
@@ -38,4 +47,64 @@ async function getGroupDetails(req, res) {
   });
 }
 
-module.exports = { getGroupDetails };
+async function getManagedGroup(req, res) {
+  const manager = await User.findOne({ username: req.session.username }).select('_id').lean();
+  const group = await Group.findOne({ manager: manager._id }).select('_id').lean();
+
+  if (!group) {
+    return res.status(404).json({ error: 'No managed group found.' });
+  }
+
+  res.json({ id: group._id });
+}
+
+async function createGroup(req, res) {
+  const { name, category, description = '', address = '', latitude, longitude } = req.body;
+
+  const nameError = validateGroupName(name);
+  if (nameError) return res.status(400).json({ error: nameError });
+
+  const categoryError = validateCategory(category);
+  if (categoryError) return res.status(400).json({ error: categoryError });
+
+  const descriptionError = validateGroupDescription(description);
+  if (descriptionError) return res.status(400).json({ error: descriptionError });
+
+  const addressError = validateAddress(address);
+  if (addressError) return res.status(400).json({ error: addressError });
+
+  if (latitude !== undefined) {
+    const latitudeError = validateLatitude(latitude);
+    if (latitudeError) return res.status(400).json({ error: latitudeError });
+  }
+
+  if (longitude !== undefined) {
+    const longitudeError = validateLongitude(longitude);
+    if (longitudeError) return res.status(400).json({ error: longitudeError });
+  }
+
+  const manager = await User.findOne({ username: req.session.username }).select('_id').lean();
+
+  const existingGroup = await Group.findOne({ manager: manager._id }).select('_id').lean();
+  if (existingGroup) {
+    return res.status(409).json({
+      error: 'You already manage a group.',
+      groupId: existingGroup._id,
+    });
+  }
+
+  const group = await Group.create({
+    name: name.trim(),
+    category: category.trim(),
+    description: description.trim(),
+    address: address.trim(),
+    ...(latitude !== undefined && { latitude: Number(latitude) }),
+    ...(longitude !== undefined && { longitude: Number(longitude) }),
+    manager: manager._id,
+    members: [manager._id],
+  });
+
+  res.status(201).json({ id: group._id });
+}
+
+module.exports = { getGroupDetails, getManagedGroup, createGroup };

@@ -85,4 +85,33 @@ async function updateProfile(req, res) {
   });
 }
 
-module.exports = { getProfile, updateProfile };
+
+async function addFriend(req, res) {
+  const { username } = req.params;
+
+  const friend = await User.findOne({ username });
+  if (!friend) {
+    return res.status(404).json({ error: 'Username not found.' });
+  }
+
+  if (req.session.username === username) {
+    return res.status(400).json({ error: "Can't friend yourself." });
+  }
+
+  const me = await User.findOne({ username: req.session.username });
+
+  await User.findOneAndUpdate(
+    { username: req.session.username },
+    { $addToSet: { friends: friend._id } }
+  );
+
+  await User.findOneAndUpdate(
+    { username: username },
+    { $addToSet: { friends: me._id } }
+  );
+
+  res.json({ ok: true });
+
+}
+
+module.exports = { getProfile, updateProfile, addFriend };

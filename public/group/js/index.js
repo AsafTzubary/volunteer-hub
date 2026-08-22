@@ -37,6 +37,32 @@ function renderMembers(members) {
   });
 }
 
+async function handleJoin(groupId) {
+  const btn = document.getElementById('join-group-btn');
+  btn.disabled = true;
+  const res = await fetch('/api/groups/' + encodeURIComponent(groupId) + '/join', { method: 'POST' });
+  const data = await res.json();
+  if (!res.ok) {
+    alert(data.error || 'Failed to join group.');
+    btn.disabled = false;
+    return;
+  }
+  window.location.reload();
+}
+
+async function handleLeave(groupId) {
+  const btn = document.getElementById('leave-group-btn');
+  btn.disabled = true;
+  const res = await fetch('/api/groups/' + encodeURIComponent(groupId) + '/leave', { method: 'POST' });
+  const data = await res.json();
+  if (!res.ok) {
+    alert(data.error || 'Failed to leave group.');
+    btn.disabled = false;
+    return;
+  }
+  window.location.reload();
+}
+
 function renderActionButtons(group) {
   if (group.isManager) {
     const editBtn = document.getElementById('edit-group-btn');
@@ -44,9 +70,15 @@ function renderActionButtons(group) {
     editBtn.classList.remove('d-none');
     document.getElementById('delete-group-btn').classList.remove('d-none');
   } else if (group.isMember) {
-    document.getElementById('leave-group-btn').classList.remove('d-none');
+    const leaveBtn = document.getElementById('leave-group-btn');
+    leaveBtn.classList.remove('d-none');
+    leaveBtn.disabled = false;
+    leaveBtn.addEventListener('click', () => handleLeave(group.id));
   } else {
-    document.getElementById('join-group-btn').classList.remove('d-none');
+    const joinBtn = document.getElementById('join-group-btn');
+    joinBtn.classList.remove('d-none');
+    joinBtn.disabled = false;
+    joinBtn.addEventListener('click', () => handleJoin(group.id));
   }
 }
 

@@ -139,4 +139,58 @@ async function createGroup(req, res) {
   res.status(201).json({ id: group._id });
 }
 
-module.exports = { listGroups, getGroupDetails, getManagedGroup, createGroup };
+async function joinGroup(req, res) {
+  const { id } = req.params;
+
+  if (!mongoose.isValidObjectId(id)) {
+    return res.status(404).json({ error: 'Group not found.' });
+  }
+
+  const [group, user] = await Promise.all([
+    Group.findById(id).select('members').lean(),
+    User.findOne({ username: req.session.username }).select('_id joinedGroups').lean(),
+  ]);
+
+  if (!group) return res.status(404).json({ error: 'Group not found.' });
+
+  const alreadyMember = group.members.some((m) => m.equals(user._id));
+  if (alreadyMember) return res.status(409).json({ error: 'You are already a member of this group.' });
+
+  await Promise.all([
+    Group.updateOne({ _id: id }, { $addToSet: { members: user._id } }),
+    User.updateOne({ _id: user._id }, { $addToSet: { joinedGroups: id } }),
+  ]);
+
+  res.json({ message: 'Joined group successfully.' });
+}
+
+async function leaveGroup(req, res) {
+  const { id } = req.params;
+
+  if (!mongoose.isValidObjectId(id)) {
+    return res.status(404).json({ error: 'Group not found.' });
+  }
+
+  const [group, user] = await Promise.all([
+    Group.findById(id).select('members manager').lean(),
+    User.findOne({ username: req.session.username }).select('_id').lean(),
+  ]);
+
+  if (!group) return res.status(404).json({ error: 'Group not found.' });
+
+  if (group.manager.equals(user._id)) {
+    return res.status(403).json({ error: 'Managers cannot leave their group. Transfer ownership first.' });
+  }
+
+  const isMember = group.members.some((m) => m.equals(user._id));
+  if (!isMember) return res.status(409).json({ error: 'You are not a member of this group.' });
+
+  await Promise.all([
+    Group.updateOne({ _id: id }, { $pull: { members: user._id } }),
+    User.updateOne({ _id: user._id }, { $pull: { joinedGroups: id } }),
+  ]);
+
+  res.json({ message: 'Left group successfully.' });
+}
+
+module.exports = { listGroups, getGroupDetails, getManagedGroup, createGroup, joinGroup, leaveGroup };

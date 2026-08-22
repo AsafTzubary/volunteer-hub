@@ -10,6 +10,38 @@ const {
   validateLongitude,
 } = require('../utils/validators');
 
+const GROUPS_PAGE_SIZE = 9;
+
+async function listGroups(req, res) {
+  const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+  const skip = (page - 1) * GROUPS_PAGE_SIZE;
+
+  const [groups, totalCount] = await Promise.all([
+    Group.find({})
+      .select('name category address manager members createdAt')
+      .populate('manager', 'username fullName')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(GROUPS_PAGE_SIZE)
+      .lean(),
+    Group.countDocuments({}),
+  ]);
+
+  res.json({
+    groups: groups.map((group) => ({
+      id: group._id,
+      name: group.name,
+      category: group.category,
+      address: group.address,
+      manager: group.manager,
+      memberCount: group.members.length,
+    })),
+    page,
+    totalPages: Math.max(1, Math.ceil(totalCount / GROUPS_PAGE_SIZE)),
+    totalCount,
+  });
+}
+
 async function getGroupDetails(req, res) {
   const { id } = req.params;
 
@@ -161,4 +193,4 @@ async function leaveGroup(req, res) {
   res.json({ message: 'Left group successfully.' });
 }
 
-module.exports = { getGroupDetails, getManagedGroup, createGroup, joinGroup, leaveGroup };
+module.exports = { listGroups, getGroupDetails, getManagedGroup, createGroup, joinGroup, leaveGroup };

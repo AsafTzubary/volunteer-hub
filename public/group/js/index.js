@@ -47,7 +47,13 @@ async function handleJoin(groupId) {
     btn.disabled = false;
     return;
   }
-  window.location.reload();
+
+  btn.classList.add('d-none');
+
+  const leaveBtn = document.getElementById('leave-group-btn');
+  leaveBtn.classList.remove('d-none');
+  leaveBtn.disabled = false;
+  leaveBtn.addEventListener('click', () => handleLeave(groupId));
 }
 
 async function handleLeave(groupId) {
@@ -60,7 +66,13 @@ async function handleLeave(groupId) {
     btn.disabled = false;
     return;
   }
-  window.location.reload();
+  
+  btn.classList.add('d-none');
+
+  const joinBtn = document.getElementById('join-group-btn');
+  joinBtn.classList.remove('d-none');
+  joinBtn.disabled = false;
+  joinBtn.addEventListener('click', () => handleJoin(groupId));
 }
 
 function renderActionButtons(group) {

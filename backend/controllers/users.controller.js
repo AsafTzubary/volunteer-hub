@@ -114,4 +114,28 @@ async function addFriend(req, res) {
 
 }
 
-module.exports = { getProfile, updateProfile, addFriend };
+async function removeFriend(req, res) {
+  const { username } = req.params;
+
+  const friend = await User.findOne({ username });
+  if (!friend) {
+    return res.status(404).json({ error: 'Username not found.' });
+  }
+
+  const me = await User.findOne({ username: req.session.username });
+
+  await User.findOneAndUpdate(
+    { username: req.session.username },
+    { $pull: { friends: friend._id } }
+  );
+
+  await User.findOneAndUpdate(
+    { username: username },
+    { $pull: { friends: me._id } }
+  );
+
+  res.json({ ok: true });
+
+}
+
+module.exports = { getProfile, updateProfile, addFriend, removeFriend };

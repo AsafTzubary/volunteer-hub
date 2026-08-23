@@ -61,13 +61,15 @@ function renderProfile(profile, sessionUsername) {
       const emailEl = document.getElementById('profile-email');
       emailEl.textContent = profile.email;
       emailEl.classList.remove('d-none');
-  }
-  } else {
-      const alreadyFriends = profile.friends.some(f => f.username === sessionUsername);
-      if (!alreadyFriends){
-            document.getElementById('add-friend').classList.remove('d-none');
-      }
     }
+  } else {
+    const alreadyFriends = profile.friends.some(f => f.username === sessionUsername);
+    if (!alreadyFriends) {
+      document.getElementById('add-friend').classList.remove('d-none');
+    } else {
+      document.getElementById('remove-friend').classList.remove('d-none');
+    }
+  }
 
   renderInterests(profile.interests || []);
   renderFriends(profile.friends || []);
@@ -144,6 +146,11 @@ async function init() {
   document.getElementById('add-friend-btn').addEventListener('click', async () => {
     await fetch('/api/users/' + encodeURIComponent(username) + '/friend', { method: 'POST' });
     document.getElementById('add-friend').classList.add('d-none');
+  });
+
+  document.getElementById('remove-friend-btn').addEventListener('click', async () => {
+    await fetch('/api/users/' + encodeURIComponent(username) + '/friend', { method: 'DELETE' });
+    document.getElementById('remove-friend').classList.add('d-none');
   });
 
   const res = await fetch('/api/users/' + encodeURIComponent(username));

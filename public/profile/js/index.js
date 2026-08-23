@@ -45,7 +45,7 @@ function targetUsername() {
   return new URLSearchParams(window.location.search).get('username');
 }
 
-function renderProfile(profile) {
+function renderProfile(profile, sessionUsername) {
   const canvas = document.getElementById('avatar-canvas');
   drawAvatar(canvas, getInitials(profile.fullName, profile.username), pickColor(profile.username));
 
@@ -61,6 +61,13 @@ function renderProfile(profile) {
       const emailEl = document.getElementById('profile-email');
       emailEl.textContent = profile.email;
       emailEl.classList.remove('d-none');
+    }
+  } else {
+    const alreadyFriends = profile.friends.some(f => f.username === sessionUsername);
+    if (!alreadyFriends) {
+      document.getElementById('add-friend').classList.remove('d-none');
+    } else {
+      document.getElementById('remove-friend').classList.remove('d-none');
     }
   }
 
@@ -135,6 +142,17 @@ async function init() {
   });
 
   const username = targetUsername() || sessionUsername;
+
+  document.getElementById('add-friend-btn').addEventListener('click', async () => {
+    await fetch('/api/users/' + encodeURIComponent(username) + '/friend', { method: 'POST' });
+    document.getElementById('add-friend').classList.add('d-none');
+  });
+
+  document.getElementById('remove-friend-btn').addEventListener('click', async () => {
+    await fetch('/api/users/' + encodeURIComponent(username) + '/friend', { method: 'DELETE' });
+    document.getElementById('remove-friend').classList.add('d-none');
+  });
+
   const res = await fetch('/api/users/' + encodeURIComponent(username));
 
   if (!res.ok) {
@@ -145,7 +163,8 @@ async function init() {
   const profile = await res.json();
   document.title = `${profile.fullName || profile.username} — Volunteer Hub`;
   document.getElementById('profile-content').classList.remove('d-none');
-  renderProfile(profile);
+  renderProfile(profile, sessionUsername);
 }
+
 
 init();

@@ -139,6 +139,81 @@ async function createGroup(req, res) {
   res.status(201).json({ id: group._id });
 }
 
+async function updateGroup(req, res) {
+  const { id } = req.params;
+
+  if (!mongoose.isValidObjectId(id)) {
+    return res.status(404).json({ error: 'Group not found.' });
+  }
+
+  const group = await Group.findById(id).select('manager').lean();
+  if (!group) {
+    return res.status(404).json({ error: 'Group not found.' });
+  }
+
+  const user = await User.findOne({ username: req.session.username }).select('_id').lean();
+  if (!group.manager.equals(user._id)) {
+    return res.status(403).json({ error: 'Only the group manager can edit this group.' });
+  }
+
+  const { name, category, description, address, latitude, longitude } = req.body;
+  const errors = {};
+
+  if (name !== undefined) {
+    const nameError = validateGroupName(name);
+    if (nameError) errors.name = nameError;
+  }
+
+  if (category !== undefined) {
+    const categoryError = validateCategory(category);
+    if (categoryError) errors.category = categoryError;
+  }
+
+  if (description !== undefined) {
+    const descriptionError = validateGroupDescription(description);
+    if (descriptionError) errors.description = descriptionError;
+  }
+
+  if (address !== undefined) {
+    const addressError = validateAddress(address);
+    if (addressError) errors.address = addressError;
+  }
+
+  if (latitude !== undefined) {
+    const latitudeError = validateLatitude(latitude);
+    if (latitudeError) errors.latitude = latitudeError;
+  }
+
+  if (longitude !== undefined) {
+    const longitudeError = validateLongitude(longitude);
+    if (longitudeError) errors.longitude = longitudeError;
+  }
+
+  if (Object.keys(errors).length > 0) {
+    return res.status(400).json({ errors });
+  }
+
+  const updates = {};
+  if (name !== undefined) updates.name = name.trim();
+  if (category !== undefined) updates.category = category.trim();
+  if (description !== undefined) updates.description = description.trim();
+  if (address !== undefined) updates.address = address.trim();
+  if (latitude !== undefined) updates.latitude = Number(latitude);
+  if (longitude !== undefined) updates.longitude = Number(longitude);
+
+  const updatedGroup = await Group.findByIdAndUpdate(id, { $set: updates }, { new: true, lean: true });
+
+  res.json({
+    id: updatedGroup._id,
+    name: updatedGroup.name,
+    category: updatedGroup.category,
+    description: updatedGroup.description,
+    address: updatedGroup.address,
+    latitude: updatedGroup.latitude,
+    longitude: updatedGroup.longitude,
+  });
+}
+
 async function joinGroup(req, res) {
   const { id } = req.params;
 
@@ -195,15 +270,12 @@ async function leaveGroup(req, res) {
 
 async function removeMember(req, res) {
   const { id, username } = req.params;
-
   if (!mongoose.isValidObjectId(id)) {
     return res.status(404).json({ error: 'Group not found.' });
   }
-
   const requester = await User.findOne({ username: req.session.username }).select('_id').lean();
   const group = await Group.findById(id).select('members manager').lean();
   const target = await User.findOne({ username }).select('_id').lean();
-
   
   if (!group) {
     return res.status(404).json({ error: 'Group not found.' });
@@ -219,13 +291,20 @@ async function removeMember(req, res) {
   }
   const isMember = group.members.some((m) => m.equals(target._id));
   if (!isMember) return res.status(409).json({ error: 'Target user is not a member of the group.' });
-
   await Promise.all([
   Group.updateOne({ _id: id }, { $pull: { members: target._id } }),
   User.updateOne({ _id: target._id }, { $pull: { joinedGroups: id } }),
   ]);
-
 res.json({ message: 'Removed from group successfully.' });
 }
-  
-module.exports = { listGroups, getGroupDetails, getManagedGroup, createGroup, joinGroup, leaveGroup, removeMember };
+
+module.exports = {
+  listGroups,
+  getGroupDetails,
+  getManagedGroup,
+  createGroup,
+  updateGroup,
+  joinGroup,
+  leaveGroup,
+  removeMember,
+};

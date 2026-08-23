@@ -74,7 +74,7 @@ async function handleLeave(groupId) {
     btn.disabled = false;
     return;
   }
-  
+
   btn.classList.add('d-none');
 
   const joinBtn = document.getElementById('join-group-btn');
@@ -84,12 +84,37 @@ async function handleLeave(groupId) {
   await refreshMembers(groupId);
 }
 
+async function handleDelete(groupId) {
+  const confirmed = confirm(
+    'Are you sure you want to delete this group? This will also delete all of its posts. This cannot be undone.'
+  );
+  if (!confirmed) return;
+
+  const btn = document.getElementById('delete-group-btn');
+  btn.disabled = true;
+
+  const res = await fetch('/api/groups/' + encodeURIComponent(groupId), { method: 'DELETE' });
+  const data = await res.json();
+
+  if (!res.ok) {
+    alert(data.error || 'Failed to delete group.');
+    btn.disabled = false;
+    return;
+  }
+
+  window.location.href = '/group/list.html';
+}
+
 function renderActionButtons(group) {
   if (group.isManager) {
     const editBtn = document.getElementById('edit-group-btn');
     editBtn.href = '/group/edit.html?id=' + encodeURIComponent(group.id);
     editBtn.classList.remove('d-none');
-    document.getElementById('delete-group-btn').classList.remove('d-none');
+
+    const deleteBtn = document.getElementById('delete-group-btn');
+    deleteBtn.classList.remove('d-none');
+    deleteBtn.disabled = false;
+    deleteBtn.addEventListener('click', () => handleDelete(group.id));
   } else if (group.isMember) {
     const leaveBtn = document.getElementById('leave-group-btn');
     leaveBtn.classList.remove('d-none');

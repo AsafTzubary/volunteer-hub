@@ -2,7 +2,7 @@ function targetGroupId() {
   return new URLSearchParams(window.location.search).get('id');
 }
 
-function personRow(person) {
+function personRow(person, showRemove) {
   const name = person.fullName || person.username;
   return `
     <div class="member-avatar">${name[0].toUpperCase()}</div>
@@ -10,7 +10,10 @@ function personRow(person) {
       <a href="${profileUrl(person.username)}" class="text-decoration-none text-dark fw-semibold small">${name}</a>
       ${person.city ? `<div class="text-muted" style="font-size:0.72rem">${person.city}</div>` : ''}
     </div>
-  `;
+    <div>
+      ${showRemove ? `<button class="btn btn-sm btn-outline-danger remove-member-btn" data-username="${person.username}">Remove</button>` : ''}
+    </div>
+      `;
 }
 
 function renderManager(manager) {
@@ -19,7 +22,7 @@ function renderManager(manager) {
   container.innerHTML = personRow(manager);
 }
 
-function renderMembers(members) {
+function renderMembers(members, isManager, groupId) {
   const list = document.getElementById('members-list');
   document.getElementById('members-count').textContent = members.length || '';
 
@@ -32,8 +35,12 @@ function renderMembers(members) {
   members.forEach((member) => {
     const li = document.createElement('li');
     li.className = 'member-item';
-    li.innerHTML = personRow(member);
+    li.innerHTML = personRow(member, isManager);
     list.appendChild(li);
+  });
+
+  list.querySelectorAll('.remove-member-btn').forEach((btn) => {
+  btn.addEventListener('click', () => handleRemoveMember(groupId, btn.dataset.username, btn));
   });
 }
 
@@ -54,6 +61,7 @@ async function handleJoin(groupId) {
   leaveBtn.classList.remove('d-none');
   leaveBtn.disabled = false;
   leaveBtn.addEventListener('click', () => handleLeave(groupId));
+  await refreshMembers(groupId);
 }
 
 async function handleLeave(groupId) {
@@ -73,6 +81,7 @@ async function handleLeave(groupId) {
   joinBtn.classList.remove('d-none');
   joinBtn.disabled = false;
   joinBtn.addEventListener('click', () => handleJoin(groupId));
+  await refreshMembers(groupId);
 }
 
 function renderActionButtons(group) {
@@ -102,8 +111,16 @@ function renderGroup(group) {
     group.description || 'No description provided.';
 
   renderManager(group.manager);
-  renderMembers(group.members);
+  renderMembers(group.members, group.isManager, group.id);
   renderActionButtons(group);
+}
+
+async function refreshMembers(groupId) {
+  const res = await fetch('/api/groups/' + encodeURIComponent(groupId));
+  if (!res.ok) return;
+  const group = await res.json();
+  renderManager(group.manager);
+  renderMembers(group.members, group.isManager, group.id);
 }
 
 async function init() {
@@ -129,6 +146,20 @@ async function init() {
   document.title = `${group.name} — Volunteer Hub`;
   document.getElementById('group-content').classList.remove('d-none');
   renderGroup(group);
+}
+
+async function handleRemoveMember(groupId, username, btn){
+  btn.disabled = true;
+  const res = await fetch('/api/groups/' + encodeURIComponent(groupId) + '/members/' + encodeURIComponent(username), { method: 'DELETE' });
+  const data = await res.json();
+  if (!res.ok) {
+    alert(data.error || 'Failed to remove member from.');
+    btn.disabled = false;
+    return;
+  } else {
+    btn.closest('li').remove()
+    document.getElementById('members-count').textContent = document.getElementById('members-list').children.length || '';
+  }
 }
 
 init();

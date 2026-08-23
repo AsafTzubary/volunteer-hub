@@ -11,7 +11,7 @@ const GROUP_DESCRIPTION_MAX_LENGTH = 500;
 const CATEGORY_MAX_LENGTH = 40;
 const ADDRESS_MAX_LENGTH = 120;
 
-
+const POST_CONTENT_MAX_LENGTH = 2000;
 
 function validateUsername(username) {
   if (username.length < USERNAME_MIN_LENGTH || username.length > USERNAME_MAX_LENGTH) {
@@ -74,6 +74,16 @@ function validateLongitude(value) {
   return validateCoordinate(value, -180, 180, 'Longitude');
 }
 
+function validatePostContent(content) {
+  if (!content || content.trim().length === 0) {
+    return 'Post content is required.';
+  }
+  if (content.trim().length > POST_CONTENT_MAX_LENGTH) {
+    return `Post content must be at most ${POST_CONTENT_MAX_LENGTH} characters.`;
+  }
+  return null;
+}
+
 module.exports = {
   USERNAME_MIN_LENGTH,
   USERNAME_MAX_LENGTH,
@@ -92,5 +102,6 @@ module.exports = {
   validateGroupDescription,
   validateAddress,
   validateLatitude,
-  validateLongitude
+  validateLongitude,
+  validatePostContent,
 };

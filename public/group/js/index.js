@@ -103,6 +103,86 @@ function renderActionButtons(group) {
   }
 }
 
+function postCard(post) {
+  const authorName = post.author.fullName || post.author.username;
+  const date = new Date(post.createdAt).toLocaleDateString();
+  const media = post.postType === 'image' && post.imageUrl
+    ? `<img src="${post.imageUrl}" alt="post image" class="img-fluid rounded mt-2" style="max-height:300px" />`
+    : '';
+  return `
+    <div class="border rounded p-3 mb-3">
+      <div class="d-flex justify-content-between align-items-center mb-1">
+        <a href="${profileUrl(post.author.username)}" class="fw-semibold text-decoration-none small">${authorName}</a>
+        <span class="text-muted" style="font-size:0.72rem">${date}</span>
+      </div>
+      <p class="mb-0 small">${post.content}</p>
+      ${media}
+    </div>
+  `;
+}
+
+function renderPosts(posts) {
+  const list = document.getElementById('posts-list');
+  if (!posts.length) {
+    list.innerHTML = '<p class="text-muted small mb-0">No posts yet.</p>';
+    return;
+  }
+  list.innerHTML = posts.map(postCard).join('');
+}
+
+async function loadPosts(groupId) {
+  const res = await fetch('/api/posts?groupId=' + encodeURIComponent(groupId));
+  if (!res.ok) return;
+  const posts = await res.json();
+  renderPosts(posts);
+}
+
+function readFileAsBase64(file) {
+  return new Promise(function (resolve, reject) {
+    const reader = new FileReader();
+    reader.onload = function () { resolve(reader.result); };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+function wirePostForm(groupId) {
+  document.getElementById('post-form').addEventListener('submit', async function (e) {
+    e.preventDefault();
+    const errorEl = document.getElementById('post-error');
+    errorEl.classList.add('d-none');
+
+    const content = document.getElementById('post-content').value;
+    const fileInput = document.getElementById('post-image');
+    const file = fileInput.files[0];
+
+    let imageData = null;
+    if (file) {
+      imageData = await readFileAsBase64(file);
+    }
+
+    const res = await fetch('/api/posts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ groupId, content, imageData }),
+    });
+    const data = await res.json();
+
+    if (!res.ok) {
+      errorEl.textContent = data.error || 'Failed to create post.';
+      errorEl.classList.remove('d-none');
+      return;
+    }
+
+    const list = document.getElementById('posts-list');
+    const placeholder = list.querySelector('p.text-muted');
+    if (placeholder) placeholder.remove();
+    list.insertAdjacentHTML('afterbegin', postCard(data));
+
+    this.reset();
+  });
+}
+
 function renderGroup(group) {
   document.getElementById('group-name').textContent = group.name;
   document.getElementById('group-category').textContent = group.category;
@@ -113,6 +193,10 @@ function renderGroup(group) {
   renderManager(group.manager);
   renderMembers(group.members, group.isManager, group.id);
   renderActionButtons(group);
+
+  if (group.isMember || group.isManager) {
+    document.getElementById('post-form').classList.remove('d-none');
+  }
 }
 
 async function refreshMembers(groupId) {
@@ -146,6 +230,8 @@ async function init() {
   document.title = `${group.name} — Volunteer Hub`;
   document.getElementById('group-content').classList.remove('d-none');
   renderGroup(group);
+  wirePostForm(groupId);
+  loadPosts(groupId);
 }
 
 async function handleRemoveMember(groupId, username, btn){

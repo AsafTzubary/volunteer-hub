@@ -84,21 +84,25 @@ async function handleLeave(groupId) {
   await refreshMembers(groupId);
 }
 
-async function handleDelete(groupId) {
-  const confirmed = confirm(
-    'Are you sure you want to delete this group? This will also delete all of its posts. This cannot be undone.'
-  );
-  if (!confirmed) return;
+let pendingDeleteGroupId = null;
 
-  const btn = document.getElementById('delete-group-btn');
-  btn.disabled = true;
+function handleDelete(groupId) {
+  pendingDeleteGroupId = groupId;
+  bootstrap.Modal.getOrCreateInstance(document.getElementById('delete-group-modal')).show();
+}
 
-  const res = await fetch('/api/groups/' + encodeURIComponent(groupId), { method: 'DELETE' });
+async function confirmDelete() {
+  const confirmBtn = document.getElementById('confirm-delete-btn');
+  confirmBtn.disabled = true;
+
+  const res = await fetch('/api/groups/' + encodeURIComponent(pendingDeleteGroupId), { method: 'DELETE' });
   const data = await res.json();
 
+  confirmBtn.disabled = false;
+
   if (!res.ok) {
+    bootstrap.Modal.getInstance(document.getElementById('delete-group-modal')).hide();
     alert(data.error || 'Failed to delete group.');
-    btn.disabled = false;
     return;
   }
 
@@ -238,6 +242,7 @@ async function init() {
 
   document.getElementById('my-profile-link').href = profileUrl(sessionUsername);
   wireLogout();
+  document.getElementById('confirm-delete-btn').addEventListener('click', confirmDelete);
 
   const groupId = targetGroupId();
   if (!groupId) {

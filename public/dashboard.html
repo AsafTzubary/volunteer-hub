@@ -11,9 +11,10 @@
   <link rel="stylesheet" href="css/styles.css" />
 </head>
 <body class="bg-light">
+
   <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
     <div class="container">
-      <span class="navbar-brand">Volunteer Hub</span>
+      <a class="navbar-brand" href="/dashboard.html">Volunteer Hub</a>
       <div class="d-flex gap-2 align-items-center">
         <a id="my-profile-link" href="#" class="btn btn-outline-light btn-sm">My Profile</a>
         <button id="logout-btn" class="btn btn-outline-light btn-sm">Log Out</button>
@@ -21,11 +22,38 @@
     </div>
   </nav>
 
-  <main class="container py-5">
-    <h1 class="h3">Welcome, <span id="username-display">...</span>!</h1>
-    <p class="text-muted">This is a placeholder dashboard. Volunteer groups and activities will show up here.</p>
+  <main class="container py-4">
+    <div class="row g-4">
+
+      <aside class="col-lg-3">
+        <div class="card shadow-sm p-4 mb-3 text-center">
+          <div id="profile-avatar" class="mx-auto mb-3 d-flex align-items-center justify-content-center rounded-circle bg-primary text-white fw-bold" style="width:64px;height:64px;font-size:1.6rem"></div>
+          <h1 id="profile-name" class="h6 mb-1"></h1>
+          <p id="profile-city" class="text-muted small mb-3"></p>
+          <a id="profile-link" href="#" class="btn btn-outline-primary btn-sm">My Profile</a>
+        </div>
+
+        <div class="card shadow-sm p-3">
+          <h2 class="h6 mb-2">My Groups</h2>
+          <ul id="joined-groups-list" class="list-unstyled mb-2"></ul>
+          <a href="/group/list.html" class="small text-muted text-decoration-none">Browse all groups...</a>
+        </div>
+      </aside>
+
+      <section class="col-lg-9">
+        <div id="feed-container" class="card shadow-sm p-4 min-vh-50">
+          <p class="text-muted small mb-0">Your feed will appear here.</p>
+        </div>
+      </section>
+
+    </div>
   </main>
 
+  <footer class="text-center text-muted py-3 mt-4 border-top small">
+    &copy; 2025 Volunteer Hub
+  </footer>
+
+  <script src="js/util.js"></script>
   <script src="js/dashboard.js"></script>
 </body>
 </html>

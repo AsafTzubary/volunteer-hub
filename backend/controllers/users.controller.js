@@ -6,6 +6,7 @@ async function getProfile(req, res) {
 
   const user = await User.findOne({ username })
     .populate('friends', 'username fullName city')
+    .populate('joinedGroups', 'name category')
     .lean();
 
   if (!user) {

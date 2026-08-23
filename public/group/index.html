@@ -73,6 +73,28 @@
 
           <div class="card shadow-sm p-3">
             <h2 class="h6 mb-3">Posts</h2>
+
+            <form id="post-form" class="d-none mb-4">
+              <div class="mb-2">
+                <select id="post-type" class="form-select form-select-sm">
+                  <option value="text">Text</option>
+                  <option value="image">Image</option>
+                  <option value="video">Video</option>
+                </select>
+              </div>
+              <div class="mb-2">
+                <textarea id="post-content" class="form-control form-control-sm" rows="3" placeholder="Write something..." maxlength="2000" required></textarea>
+              </div>
+              <div id="image-url-field" class="mb-2 d-none">
+                <input id="post-image-url" type="url" class="form-control form-control-sm" placeholder="Image URL" />
+              </div>
+              <div id="video-url-field" class="mb-2 d-none">
+                <input id="post-video-url" type="url" class="form-control form-control-sm" placeholder="Video URL" />
+              </div>
+              <p id="post-error" class="text-danger small mb-2 d-none"></p>
+              <button type="submit" class="btn btn-primary btn-sm">Post</button>
+            </form>
+
             <div id="posts-list">
               <p class="text-muted small mb-0">No posts yet.</p>
             </div>

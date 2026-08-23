@@ -1,20 +1,35 @@
-async function loadSession() {
-  const response = await fetch('/api/auth/me');
-
-  if (!response.ok) {
-    window.location.href = 'login.html';
+function renderJoinedGroups(groups) {
+  const list = document.getElementById('joined-groups-list');
+  if (!groups.length) {
+    list.innerHTML = '<li class="text-muted small">You haven\'t joined any groups yet.</li>';
     return;
   }
-
-  const data = await response.json();
-  document.getElementById('username-display').textContent = data.username;
-  document.getElementById('my-profile-link').href =
-    'profile/index.html?username=' + encodeURIComponent(data.username);
+  list.innerHTML = groups.map((group) => `
+    <li class="mb-1">
+      <a href="/group/index.html?id=${encodeURIComponent(group._id)}" class="text-decoration-none small">${group.name}</a>
+    </li>
+  `).join('');
 }
 
-document.getElementById('logout-btn').addEventListener('click', async () => {
-  await fetch('/api/auth/logout', { method: 'POST' });
-  window.location.href = 'login.html';
-});
+async function init() {
+  const sessionUsername = await loadSession();
+  if (!sessionUsername) return;
 
-loadSession();
+  const profileUrl_ = profileUrl(sessionUsername);
+  document.getElementById('my-profile-link').href = profileUrl_;
+  document.getElementById('profile-link').href = profileUrl_;
+  wireLogout();
+
+  const res = await fetch('/api/users/' + encodeURIComponent(sessionUsername));
+  if (!res.ok) return;
+  const user = await res.json();
+
+  const displayName = user.fullName || user.username;
+  document.getElementById('profile-avatar').textContent = displayName[0].toUpperCase();
+  document.getElementById('profile-name').textContent = displayName;
+  document.getElementById('profile-city').textContent = user.city || '';
+
+  renderJoinedGroups(user.joinedGroups || []);
+}
+
+init();

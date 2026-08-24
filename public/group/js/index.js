@@ -153,6 +153,9 @@ function renderActionButtons(group) {
     const editBtn = document.getElementById('edit-group-btn');
     editBtn.href = '/group/edit.html?id=' + encodeURIComponent(group.id);
     editBtn.classList.remove('d-none');
+    const createEventBtn = document.getElementById('create-event-btn');
+    createEventBtn.href = '/event/create.html?groupId=' + encodeURIComponent(group.id);
+    createEventBtn.classList.remove('d-none');
     const deleteBtn = document.getElementById('delete-group-btn');
     deleteBtn.classList.remove('d-none');
     deleteBtn.disabled = false;

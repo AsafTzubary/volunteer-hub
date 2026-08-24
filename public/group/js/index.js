@@ -132,23 +132,6 @@ function renderActionButtons(group) {
   }
 }
 
-function postCard(post) {
-  const authorName = post.author.fullName || post.author.username;
-  const date = new Date(post.createdAt).toLocaleDateString();
-  const media = post.postType === 'image' && post.imageUrl
-    ? `<img src="${post.imageUrl}" alt="post image" class="img-fluid rounded mt-2" style="max-height:300px" />`
-    : '';
-  return `
-    <div class="border rounded p-3 mb-3">
-      <div class="d-flex justify-content-between align-items-center mb-1">
-        <a href="${profileUrl(post.author.username)}" class="fw-semibold text-decoration-none small">${authorName}</a>
-        <span class="text-muted" style="font-size:0.72rem">${date}</span>
-      </div>
-      <p class="mb-0 small">${post.content}</p>
-      ${media}
-    </div>
-  `;
-}
 
 function renderPosts(posts) {
   const list = document.getElementById('posts-list');

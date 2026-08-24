@@ -44,7 +44,7 @@ function validateGroupName(name) {
 }
 
 function validateCategory(category) {
-  if (category.trim().length === 0 || category.length > CATEGORY_MAX_LENGTH) {
+  if (!category || typeof category !== 'string' || category.trim().length === 0 || category.length > CATEGORY_MAX_LENGTH) {
     return `Category is required and must be at most ${CATEGORY_MAX_LENGTH} characters.`;
   }
   return null;

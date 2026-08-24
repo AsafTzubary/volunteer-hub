@@ -74,7 +74,7 @@ async function handleLeave(groupId) {
     btn.disabled = false;
     return;
   }
-  
+
   btn.classList.add('d-none');
 
   const joinBtn = document.getElementById('join-group-btn');
@@ -84,12 +84,41 @@ async function handleLeave(groupId) {
   await refreshMembers(groupId);
 }
 
+let pendingDeleteGroupId = null;
+
+function handleDelete(groupId) {
+  pendingDeleteGroupId = groupId;
+  bootstrap.Modal.getOrCreateInstance(document.getElementById('delete-group-modal')).show();
+}
+
+async function confirmDelete() {
+  const confirmBtn = document.getElementById('confirm-delete-btn');
+  confirmBtn.disabled = true;
+
+  const res = await fetch('/api/groups/' + encodeURIComponent(pendingDeleteGroupId), { method: 'DELETE' });
+  const data = await res.json();
+
+  confirmBtn.disabled = false;
+
+  if (!res.ok) {
+    bootstrap.Modal.getInstance(document.getElementById('delete-group-modal')).hide();
+    alert(data.error || 'Failed to delete group.');
+    return;
+  }
+
+  window.location.href = '/group/list.html';
+}
+
 function renderActionButtons(group) {
   if (group.isManager) {
     const editBtn = document.getElementById('edit-group-btn');
     editBtn.href = '/group/edit.html?id=' + encodeURIComponent(group.id);
     editBtn.classList.remove('d-none');
-    document.getElementById('delete-group-btn').classList.remove('d-none');
+
+    const deleteBtn = document.getElementById('delete-group-btn');
+    deleteBtn.classList.remove('d-none');
+    deleteBtn.disabled = false;
+    deleteBtn.addEventListener('click', () => handleDelete(group.id));
   } else if (group.isMember) {
     const leaveBtn = document.getElementById('leave-group-btn');
     leaveBtn.classList.remove('d-none');
@@ -213,6 +242,7 @@ async function init() {
 
   document.getElementById('my-profile-link').href = profileUrl(sessionUsername);
   wireLogout();
+  document.getElementById('confirm-delete-btn').addEventListener('click', confirmDelete);
 
   const groupId = targetGroupId();
   if (!groupId) {

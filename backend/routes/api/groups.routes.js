@@ -6,6 +6,7 @@ const {
   getManagedGroup,
   createGroup,
   updateGroup,
+  deleteGroup,
   joinGroup,
   leaveGroup,
   removeMember,
@@ -18,6 +19,7 @@ router.get('/mine', requireAuth, getManagedGroup);
 router.get('/:id', requireAuth, getGroupDetails);
 router.post('/', requireAuth, createGroup);
 router.put('/:id', requireAuth, updateGroup);
+router.delete('/:id', requireAuth, deleteGroup);
 router.post('/:id/join', requireAuth, joinGroup);
 router.post('/:id/leave', requireAuth, leaveGroup);
 router.delete('/:id/members/:username', requireAuth, removeMember);

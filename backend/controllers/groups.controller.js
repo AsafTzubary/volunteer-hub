@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const Group = require('../models/Group');
 const User = require('../models/User');
+const Post = require('../models/Post');
 const {
   validateGroupName,
   validateCategory,
@@ -214,6 +215,32 @@ async function updateGroup(req, res) {
   });
 }
 
+async function deleteGroup(req, res) {
+  const { id } = req.params;
+
+  if (!mongoose.isValidObjectId(id)) {
+    return res.status(404).json({ error: 'Group not found.' });
+  }
+
+  const group = await Group.findById(id).select('manager').lean();
+  if (!group) {
+    return res.status(404).json({ error: 'Group not found.' });
+  }
+
+  const user = await User.findOne({ username: req.session.username }).select('_id').lean();
+  if (!group.manager.equals(user._id)) {
+    return res.status(403).json({ error: 'Only the group manager can delete this group.' });
+  }
+
+  await Promise.all([
+    Group.deleteOne({ _id: id }),
+    Post.deleteMany({ group: id }),
+    User.updateMany({ joinedGroups: id }, { $pull: { joinedGroups: id } }),
+  ]);
+
+  res.json({ message: 'Group deleted successfully.' });
+}
+
 async function joinGroup(req, res) {
   const { id } = req.params;
 
@@ -276,26 +303,26 @@ async function removeMember(req, res) {
   const requester = await User.findOne({ username: req.session.username }).select('_id').lean();
   const group = await Group.findById(id).select('members manager').lean();
   const target = await User.findOne({ username }).select('_id').lean();
-  
+
   if (!group) {
     return res.status(404).json({ error: 'Group not found.' });
-  } 
+  }
   if (!target) {
     return res.status(404).json({ error: 'Username not found.' });
-  } 
+  }
   if (!group.manager.equals(requester._id)) {
     return res.status(403).json({ error: 'Only managers can remove members.' });
-  } 
+  }
   if (group.manager.equals(target._id)){
     return res.status(403).json({ error: 'Can not remove group manager.' });
   }
   const isMember = group.members.some((m) => m.equals(target._id));
   if (!isMember) return res.status(409).json({ error: 'Target user is not a member of the group.' });
   await Promise.all([
-  Group.updateOne({ _id: id }, { $pull: { members: target._id } }),
-  User.updateOne({ _id: target._id }, { $pull: { joinedGroups: id } }),
+    Group.updateOne({ _id: id }, { $pull: { members: target._id } }),
+    User.updateOne({ _id: target._id }, { $pull: { joinedGroups: id } }),
   ]);
-res.json({ message: 'Removed from group successfully.' });
+  res.json({ message: 'Removed from group successfully.' });
 }
 
 module.exports = {
@@ -304,6 +331,7 @@ module.exports = {
   getManagedGroup,
   createGroup,
   updateGroup,
+  deleteGroup,
   joinGroup,
   leaveGroup,
   removeMember,

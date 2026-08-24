@@ -10,6 +10,7 @@ const {
   joinGroup,
   leaveGroup,
   removeMember,
+  transferOwnership,
 } = require('../../controllers/groups.controller');
 
 const router = express.Router();
@@ -23,5 +24,6 @@ router.delete('/:id', requireAuth, deleteGroup);
 router.post('/:id/join', requireAuth, joinGroup);
 router.post('/:id/leave', requireAuth, leaveGroup);
 router.delete('/:id/members/:username', requireAuth, removeMember);
+router.post('/:id/manager/:username', requireAuth, transferOwnership);
 
 module.exports = router;

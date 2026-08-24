@@ -41,8 +41,11 @@
       </aside>
 
       <section class="col-lg-9">
-        <div id="feed-container" class="card shadow-sm p-4 min-vh-50">
-          <p class="text-muted small mb-0">Your feed will appear here.</p>
+        <div id="feed-container" class="card shadow-sm p-4 mb-3">
+          <p id="feed-empty" class="text-muted small mb-0">Your feed will appear here.</p>
+        </div>
+        <div class="text-center">
+          <button id="load-more-btn" class="btn btn-outline-secondary btn-sm d-none">Load more</button>
         </div>
       </section>
 
@@ -54,6 +57,7 @@
   </footer>
 
   <script src="js/util.js"></script>
+  <script src="js/post-card.js"></script>
   <script src="js/dashboard.js"></script>
 </body>
 </html>

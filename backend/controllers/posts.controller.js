@@ -112,29 +112,74 @@ async function createPost(req, res) {
     createdAt: populated.createdAt,
   });
 }
-
 async function deletePost(req, res) {
   const { id } = req.params;
-
   if (!mongoose.isValidObjectId(id)) return res.status(404).json({ error: 'Post not found.' });
-
-const post = await Post.findById(id).select('author group').lean();
-if (!post) return res.status(404).json({ error: 'Post not found.' });
-
-const [group, user] = await Promise.all([
-  Group.findById(post.group).select('manager').lean(),
-  User.findOne({ username: req.session.username }).select('_id').lean(),
-]);
-
-const isAuthor = post.author.equals(user._id);
-const isManager = group.manager.equals(user._id);
-
-if (!isAuthor && !isManager) {
-  return res.status(403).json({ error: 'Only the post author or group manager can delete this post.' });
+  const post = await Post.findById(id).select('author group').lean();
+  if (!post) return res.status(404).json({ error: 'Post not found.' });
+  const [group, user] = await Promise.all([
+    Group.findById(post.group).select('manager').lean(),
+    User.findOne({ username: req.session.username }).select('_id').lean(),
+  ]);
+  const isAuthor = post.author.equals(user._id);
+  const isManager = group.manager.equals(user._id);
+  if (!isAuthor && !isManager) {
+    return res.status(403).json({ error: 'Only the post author or group manager can delete this post.' });
+  }
+  await Post.deleteOne({ _id: id });
+  return res.status(200).json({ message: 'Post deleted successfully' });
 }
 
-await Post.deleteOne({ _id: id });
-return res.status(200).json({ message: 'Post deleted successfully' });
+const FEED_PAGE_SIZE = 10;
+async function getFeed(req, res) {
+  const { before, after } = req.query;
+  const user = await User.findOne({ username: req.session.username })
+    .select('joinedGroups friends')
+    .lean();
+  const baseFilter = {
+    $or: [
+      { group: { $in: user.joinedGroups } },
+      { author: { $in: user.friends } },
+    ],
+  };
+  if (after) {
+    const afterDate = new Date(after);
+    if (isNaN(afterDate)) return res.status(400).json({ error: 'Invalid after date.' });
+    const posts = await Post.find({ ...baseFilter, createdAt: { $gt: afterDate } })
+      .populate('author', 'username fullName')
+      .populate('group', 'name')
+      .sort({ createdAt: -1 })
+      .lean();
+    return res.json({ posts: posts.map(formatPost), hasMore: false });
+  }
+  const filter = before
+    ? { ...baseFilter, createdAt: { $lt: new Date(before) } }
+    : baseFilter;
+  if (before && isNaN(new Date(before))) {
+    return res.status(400).json({ error: 'Invalid before date.' });
+  }
+  const posts = await Post.find(filter)
+    .populate('author', 'username fullName')
+    .populate('group', 'name')
+    .sort({ createdAt: -1 })
+    .limit(FEED_PAGE_SIZE + 1)
+    .lean();
+  const hasMore = posts.length > FEED_PAGE_SIZE;
+  const page = posts.slice(0, FEED_PAGE_SIZE);
+  res.json({ posts: page.map(formatPost), hasMore });
+}
+function formatPost(post) {
+  return {
+    id: post._id,
+    author: post.author,
+    group: post.group ? { id: post.group._id, name: post.group.name } : null,
+    content: post.content,
+    postType: post.postType,
+    imageUrl: post.imageUrl,
+    likesCount: post.likes ? post.likes.length : 0,
+    commentsCount: post.comments ? post.comments.length : 0,
+    createdAt: post.createdAt,
+  };
 }
 
-module.exports = { listGroupPosts, createPost, deletePost };
+module.exports = { listGroupPosts, createPost, deletePost, getFeed };

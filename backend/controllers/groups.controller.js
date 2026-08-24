@@ -137,6 +137,8 @@ async function createGroup(req, res) {
     members: [manager._id],
   });
 
+  await User.updateOne({ _id: manager._id }, { $addToSet: { joinedGroups: group._id } });
+
   res.status(201).json({ id: group._id });
 }
 
@@ -325,6 +327,45 @@ async function removeMember(req, res) {
   res.json({ message: 'Removed from group successfully.' });
 }
 
+async function transferOwnership(req, res) {
+  const { id, username } = req.params;
+
+  if (!mongoose.isValidObjectId(id)) {
+    return res.status(404).json({ error: 'Group not found.' });
+  }
+
+  const [requester, group, target] = await Promise.all([
+    User.findOne({ username: req.session.username }).select('_id').lean(),
+    Group.findById(id).select('manager members').lean(),
+    User.findOne({ username }).select('_id').lean(),
+  ]);
+
+  if (!group) {
+    return res.status(404).json({ error: 'Group not found.' });
+  }
+  if (!target) {
+    return res.status(404).json({ error: 'Username not found.' });
+  }
+  if (!group.manager.equals(requester._id)) {
+    return res.status(403).json({ error: 'Only the current manager can transfer ownership.' });
+  }
+  if (group.manager.equals(target._id)) {
+    return res.status(400).json({ error: 'This user is already the manager.' });
+  }
+
+  const isMember = group.members.some((m) => m.equals(target._id));
+  if (!isMember) {
+    return res.status(409).json({ error: 'The new manager must already be a member of the group.' });
+  }
+
+  await Group.updateOne(
+    { _id: id },
+    { $set: { manager: target._id }, $addToSet: { members: target._id } }
+  );
+
+  res.json({ message: 'Ownership transferred successfully.' });
+}
+
 module.exports = {
   listGroups,
   getGroupDetails,
@@ -335,4 +376,5 @@ module.exports = {
   joinGroup,
   leaveGroup,
   removeMember,
+  transferOwnership,
 };

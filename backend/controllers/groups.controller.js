@@ -137,6 +137,8 @@ async function createGroup(req, res) {
     members: [manager._id],
   });
 
+  await User.updateOne({ _id: manager._id }, { $addToSet: { joinedGroups: group._id } });
+
   res.status(201).json({ id: group._id });
 }
 

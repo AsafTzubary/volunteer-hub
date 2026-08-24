@@ -2,7 +2,7 @@ function targetGroupId() {
   return new URLSearchParams(window.location.search).get('id');
 }
 
-function personRow(person, showRemove) {
+function personRow(person, showRemove, showMakeManager) {
   const name = person.fullName || person.username;
   return `
     <div class="member-avatar">${name[0].toUpperCase()}</div>
@@ -10,7 +10,8 @@ function personRow(person, showRemove) {
       <a href="${profileUrl(person.username)}" class="text-decoration-none text-dark fw-semibold small">${name}</a>
       ${person.city ? `<div class="text-muted" style="font-size:0.72rem">${person.city}</div>` : ''}
     </div>
-    <div>
+    <div class="d-flex gap-1">
+      ${showMakeManager ? `<button class="btn btn-sm btn-outline-primary make-manager-btn" data-username="${person.username}">Make Manager</button>` : ''}
       ${showRemove ? `<button class="btn btn-sm btn-outline-danger remove-member-btn" data-username="${person.username}">Remove</button>` : ''}
     </div>
       `;
@@ -22,7 +23,7 @@ function renderManager(manager) {
   container.innerHTML = personRow(manager);
 }
 
-function renderMembers(members, isManager, groupId) {
+function renderMembers(members, isManager, groupId, managerUsername) {
   const list = document.getElementById('members-list');
   document.getElementById('members-count').textContent = members.length || '';
 
@@ -35,12 +36,17 @@ function renderMembers(members, isManager, groupId) {
   members.forEach((member) => {
     const li = document.createElement('li');
     li.className = 'member-item';
-    li.innerHTML = personRow(member, isManager);
+    const showMakeManager = isManager && member.username !== managerUsername;
+    li.innerHTML = personRow(member, isManager, showMakeManager);
     list.appendChild(li);
   });
 
   list.querySelectorAll('.remove-member-btn').forEach((btn) => {
   btn.addEventListener('click', () => handleRemoveMember(groupId, btn.dataset.username, btn));
+  });
+
+  list.querySelectorAll('.make-manager-btn').forEach((btn) => {
+    btn.addEventListener('click', () => handleTransferOwnership(groupId, btn.dataset.username, btn));
   });
 }
 
@@ -107,6 +113,26 @@ async function confirmDelete() {
   }
 
   window.location.href = '/group/list.html';
+}
+
+async function handleTransferOwnership(groupId, username, btn) {
+  const confirmed = confirm(`Make ${username} the new manager of this group? You will remain a regular member.`);
+  if (!confirmed) return;
+
+  btn.disabled = true;
+  const res = await fetch(
+    '/api/groups/' + encodeURIComponent(groupId) + '/manager/' + encodeURIComponent(username),
+    { method: 'POST' }
+  );
+  const data = await res.json();
+
+  if (!res.ok) {
+    alert(data.error || 'Failed to transfer ownership.');
+    btn.disabled = false;
+    return;
+  }
+
+  window.location.reload();
 }
 
 function renderActionButtons(group) {
@@ -220,7 +246,7 @@ function renderGroup(group) {
     group.description || 'No description provided.';
 
   renderManager(group.manager);
-  renderMembers(group.members, group.isManager, group.id);
+  renderMembers(group.members, group.isManager, group.id, group.manager.username);
   renderActionButtons(group);
 
   if (group.isMember || group.isManager) {
@@ -233,7 +259,7 @@ async function refreshMembers(groupId) {
   if (!res.ok) return;
   const group = await res.json();
   renderManager(group.manager);
-  renderMembers(group.members, group.isManager, group.id);
+  renderMembers(group.members, group.isManager, group.id, group.manager.username);
 }
 
 async function init() {

@@ -13,6 +13,35 @@ const {
   validateMaxParticipants,
 } = require('../utils/validators');
 
+async function listGroupEvents(req, res) {
+  const { groupId } = req.query;
+
+  if (!groupId || !mongoose.isValidObjectId(groupId)) {
+    return res.status(400).json({ error: 'Valid groupId is required.' });
+  }
+
+  const events = await Event.find({ group: groupId })
+    .populate('manager', 'username fullName')
+    .sort({ date: 1 })
+    .lean();
+
+  res.json(
+    events.map((event) => ({
+      id: event._id,
+      title: event.title,
+      category: event.category,
+      description: event.description,
+      address: event.address,
+      date: event.date,
+      maxParticipants: event.maxParticipants,
+      participantsCount: event.participants.length,
+      status: event.status,
+      manager: event.manager,
+      createdAt: event.createdAt,
+    }))
+  );
+}
+
 async function createEvent(req, res) {
   const {
     groupId,
@@ -100,4 +129,4 @@ async function createEvent(req, res) {
   });
 }
 
-module.exports = { createEvent };
+module.exports = { listGroupEvents, createEvent };

@@ -26,10 +26,12 @@ function renderManager(manager) {
 function renderMembers(members, isManager, groupId, managerUsername) {
   const list = document.getElementById('members-list');
   document.getElementById('members-count').textContent = members.length || '';
+
   if (!members.length) {
     list.innerHTML = '<li class="text-muted small">No members yet.</li>';
     return;
   }
+
   list.innerHTML = '';
   members.forEach((member) => {
     const li = document.createElement('li');
@@ -38,9 +40,11 @@ function renderMembers(members, isManager, groupId, managerUsername) {
     li.innerHTML = personRow(member, isManager, showMakeManager);
     list.appendChild(li);
   });
+
   list.querySelectorAll('.remove-member-btn').forEach((btn) => {
   btn.addEventListener('click', () => handleRemoveMember(groupId, btn.dataset.username, btn));
   });
+
   list.querySelectorAll('.make-manager-btn').forEach((btn) => {
     btn.addEventListener('click', () => handleTransferOwnership(groupId, btn.dataset.username));
   });
@@ -56,7 +60,9 @@ async function handleJoin(groupId) {
     btn.disabled = false;
     return;
   }
+
   btn.classList.add('d-none');
+
   const leaveBtn = document.getElementById('leave-group-btn');
   leaveBtn.classList.remove('d-none');
   leaveBtn.disabled = false;
@@ -74,7 +80,9 @@ async function handleLeave(groupId) {
     btn.disabled = false;
     return;
   }
+
   btn.classList.add('d-none');
+
   const joinBtn = document.getElementById('join-group-btn');
   joinBtn.classList.remove('d-none');
   joinBtn.disabled = false;
@@ -83,6 +91,7 @@ async function handleLeave(groupId) {
 }
 
 let pendingDeleteGroupId = null;
+
 function handleDelete(groupId) {
   pendingDeleteGroupId = groupId;
   bootstrap.Modal.getOrCreateInstance(document.getElementById('delete-group-modal')).show();
@@ -91,40 +100,23 @@ function handleDelete(groupId) {
 async function confirmDelete() {
   const confirmBtn = document.getElementById('confirm-delete-btn');
   confirmBtn.disabled = true;
+
   const res = await fetch('/api/groups/' + encodeURIComponent(pendingDeleteGroupId), { method: 'DELETE' });
   const data = await res.json();
+
   confirmBtn.disabled = false;
+
   if (!res.ok) {
     bootstrap.Modal.getInstance(document.getElementById('delete-group-modal')).hide();
     alert(data.error || 'Failed to delete group.');
     return;
   }
+
   window.location.href = '/group/list.html';
 }
 
-let pendingDeletePostId = null;
-async function handleDeletePostClick(postId) {
-  pendingDeletePostId = postId;
-  bootstrap.Modal.getOrCreateInstance(document.getElementById('delete-post-modal')).show();
-}
-
-async function confirmDeletePost() {
-  const confirmBtn = document.getElementById('confirm-delete-post-btn');
-  confirmBtn.disabled = true;
-  const res = await fetch('/api/posts/' + encodeURIComponent(pendingDeletePostId), { method: 'DELETE' });
-  const data = await res.json();
-  confirmBtn.disabled = false;
-  if (!res.ok) {
-    bootstrap.Modal.getInstance(document.getElementById('delete-post-modal')).hide();
-    alert(data.error || 'Failed to delete post.');
-    return;
-  } else {
-    document.querySelector('[data-post-id="' + pendingDeletePostId + '"]').remove();
-    bootstrap.Modal.getInstance(document.getElementById('delete-post-modal')).hide();
-  }
-}
-
 let pendingTransfer = null;
+
 function handleTransferOwnership(groupId, username) {
   pendingTransfer = { groupId, username };
   document.getElementById('transfer-target-name').textContent = username;
@@ -134,17 +126,21 @@ function handleTransferOwnership(groupId, username) {
 async function confirmTransfer() {
   const confirmBtn = document.getElementById('confirm-transfer-btn');
   confirmBtn.disabled = true;
+
   const res = await fetch(
     '/api/groups/' + encodeURIComponent(pendingTransfer.groupId) + '/manager/' + encodeURIComponent(pendingTransfer.username),
     { method: 'POST' }
   );
   const data = await res.json();
+
   confirmBtn.disabled = false;
+
   if (!res.ok) {
     bootstrap.Modal.getInstance(document.getElementById('transfer-ownership-modal')).hide();
     alert(data.error || 'Failed to transfer ownership.');
     return;
   }
+
   window.location.reload();
 }
 
@@ -153,9 +149,11 @@ function renderActionButtons(group) {
     const editBtn = document.getElementById('edit-group-btn');
     editBtn.href = '/group/edit.html?id=' + encodeURIComponent(group.id);
     editBtn.classList.remove('d-none');
+
     const createEventBtn = document.getElementById('create-event-btn');
     createEventBtn.href = '/event/create.html?groupId=' + encodeURIComponent(group.id);
     createEventBtn.classList.remove('d-none');
+
     const deleteBtn = document.getElementById('delete-group-btn');
     deleteBtn.classList.remove('d-none');
     deleteBtn.disabled = false;
@@ -173,42 +171,91 @@ function renderActionButtons(group) {
   }
 }
 
-function postCard(post, canDelete) {
+function postCard(post) {
   const authorName = post.author.fullName || post.author.username;
   const date = new Date(post.createdAt).toLocaleDateString();
   const media = post.postType === 'image' && post.imageUrl
     ? `<img src="${post.imageUrl}" alt="post image" class="img-fluid rounded mt-2" style="max-height:300px" />`
     : '';
   return `
-    <div class="border rounded p-3 mb-3" data-post-id="${post.id}">
+    <div class="border rounded p-3 mb-3">
       <div class="d-flex justify-content-between align-items-center mb-1">
         <a href="${profileUrl(post.author.username)}" class="fw-semibold text-decoration-none small">${authorName}</a>
         <span class="text-muted" style="font-size:0.72rem">${date}</span>
       </div>
       <p class="mb-0 small">${post.content}</p>
       ${media}
-      ${canDelete ? `<button class="btn btn-sm btn-outline-danger delete-post-btn mt-2" data-id="${post.id}">Delete</button>` : ''}
     </div>
   `;
 }
 
-function renderPosts(posts, sessionUsername, isManager) {
+function renderPosts(posts) {
   const list = document.getElementById('posts-list');
   if (!posts.length) {
     list.innerHTML = '<p class="text-muted small mb-0">No posts yet.</p>';
     return;
   }
-  list.innerHTML = posts.map((post) => postCard(post, isManager || post.author.username === sessionUsername)).join('')
-  list.querySelectorAll('.delete-post-btn').forEach((btn) => {
-  btn.addEventListener('click', () => handleDeletePostClick(btn.dataset.id));
-  });
+  list.innerHTML = posts.map(postCard).join('');
 }
 
-async function loadPosts(groupId, sessionUsername, isManager) {
+async function loadPosts(groupId) {
   const res = await fetch('/api/posts?groupId=' + encodeURIComponent(groupId));
   if (!res.ok) return;
   const posts = await res.json();
-  renderPosts(posts, sessionUsername, isManager);
+  renderPosts(posts);
+}
+
+function formatEventDate(iso) {
+  return new Date(iso).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' });
+}
+
+function eventCard(event) {
+  const managerName = event.manager.fullName || event.manager.username;
+  return `
+    <div class="border rounded p-3">
+      <div class="d-flex justify-content-between align-items-center mb-1">
+        <span class="fw-semibold small">${event.title}</span>
+        <span class="category-badge">${event.category}</span>
+      </div>
+      <p class="text-muted small mb-1">${formatEventDate(event.date)}</p>
+      ${event.address ? `<p class="text-muted small mb-1">${event.address}</p>` : ''}
+      ${event.description ? `<p class="mb-1 small">${event.description}</p>` : ''}
+      <p class="text-muted small mb-0">${event.participantsCount}/${event.maxParticipants} participants · Organized by ${managerName}</p>
+    </div>
+  `;
+}
+
+let currentEvents = [];
+let currentEventIndex = 0;
+
+function renderCurrentEvent() {
+  const list = document.getElementById('events-list');
+  const nav = document.getElementById('events-nav');
+
+  if (!currentEvents.length) {
+    list.innerHTML = '<p class="text-muted small mb-0">No events scheduled yet.</p>';
+    nav.classList.remove('d-flex');
+    nav.classList.add('d-none');
+    return;
+  }
+
+  list.innerHTML = eventCard(currentEvents[currentEventIndex]);
+
+  document.getElementById('event-indicator').textContent =
+    `Event ${currentEventIndex + 1} of ${currentEvents.length}`;
+  document.getElementById('prev-event-btn').disabled = currentEventIndex === 0;
+  document.getElementById('next-event-btn').disabled = currentEventIndex === currentEvents.length - 1;
+
+  nav.classList.remove('d-none');
+  nav.classList.add('d-flex');
+}
+
+async function loadEvents(groupId) {
+  const res = await fetch('/api/events?groupId=' + encodeURIComponent(groupId));
+  if (!res.ok) return;
+  currentEvents = await res.json();
+  currentEventIndex = 0;
+  renderCurrentEvent();
 }
 
 function readFileAsBase64(file) {
@@ -225,28 +272,34 @@ function wirePostForm(groupId) {
     e.preventDefault();
     const errorEl = document.getElementById('post-error');
     errorEl.classList.add('d-none');
+
     const content = document.getElementById('post-content').value;
     const fileInput = document.getElementById('post-image');
     const file = fileInput.files[0];
+
     let imageData = null;
     if (file) {
       imageData = await readFileAsBase64(file);
     }
+
     const res = await fetch('/api/posts', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ groupId, content, imageData }),
     });
     const data = await res.json();
+
     if (!res.ok) {
       errorEl.textContent = data.error || 'Failed to create post.';
       errorEl.classList.remove('d-none');
       return;
     }
+
     const list = document.getElementById('posts-list');
     const placeholder = list.querySelector('p.text-muted');
     if (placeholder) placeholder.remove();
-    list.insertAdjacentHTML('afterbegin', postCard(data, true));
+    list.insertAdjacentHTML('afterbegin', postCard(data));
+
     this.reset();
   });
 }
@@ -257,9 +310,11 @@ function renderGroup(group) {
   document.getElementById('group-address').textContent = group.address || '';
   document.getElementById('group-description').textContent =
     group.description || 'No description provided.';
+
   renderManager(group.manager);
   renderMembers(group.members, group.isManager, group.id, group.manager.username);
   renderActionButtons(group);
+
   if (group.isMember || group.isManager) {
     document.getElementById('post-form').classList.remove('d-none');
   }
@@ -276,27 +331,43 @@ async function refreshMembers(groupId) {
 async function init() {
   const sessionUsername = await loadSession();
   if (!sessionUsername) return;
+
   document.getElementById('my-profile-link').href = profileUrl(sessionUsername);
   wireLogout();
   document.getElementById('confirm-delete-btn').addEventListener('click', confirmDelete);
-  document.getElementById('confirm-delete-post-btn').addEventListener('click', confirmDeletePost);
   document.getElementById('confirm-transfer-btn').addEventListener('click', confirmTransfer);
+  document.getElementById('prev-event-btn').addEventListener('click', () => {
+    if (currentEventIndex > 0) {
+      currentEventIndex -= 1;
+      renderCurrentEvent();
+    }
+  });
+  document.getElementById('next-event-btn').addEventListener('click', () => {
+    if (currentEventIndex < currentEvents.length - 1) {
+      currentEventIndex += 1;
+      renderCurrentEvent();
+    }
+  });
+
   const groupId = targetGroupId();
   if (!groupId) {
     document.getElementById('not-found').classList.remove('d-none');
     return;
   }
+
   const res = await fetch('/api/groups/' + encodeURIComponent(groupId));
   if (!res.ok) {
     document.getElementById('not-found').classList.remove('d-none');
     return;
   }
+
   const group = await res.json();
   document.title = `${group.name} — Volunteer Hub`;
   document.getElementById('group-content').classList.remove('d-none');
   renderGroup(group);
   wirePostForm(groupId);
-  loadPosts(groupId, sessionUsername, group.isManager);
+  loadPosts(groupId);
+  loadEvents(groupId);
 }
 
 async function handleRemoveMember(groupId, username, btn){

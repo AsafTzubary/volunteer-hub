@@ -3,6 +3,8 @@ const authRoutes = require('./auth.routes');
 const usersRoutes = require('./users.routes');
 const groupsRoutes = require('./groups.routes');
 const postsRoutes = require('./posts.routes');
+const eventsRoutes = require('./events.routes');
+
 
 const router = express.Router();
 
@@ -10,5 +12,6 @@ router.use('/auth', authRoutes);
 router.use('/users', usersRoutes);
 router.use('/groups', groupsRoutes);
 router.use('/posts', postsRoutes);
+router.use('/events', eventsRoutes);
 
 module.exports = router;

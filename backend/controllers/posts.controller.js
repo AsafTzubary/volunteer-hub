@@ -113,4 +113,28 @@ async function createPost(req, res) {
   });
 }
 
-module.exports = { listGroupPosts, createPost };
+async function deletePost(req, res) {
+  const { id } = req.params;
+
+  if (!mongoose.isValidObjectId(id)) return res.status(404).json({ error: 'Post not found.' });
+
+const post = await Post.findById(id).select('author group').lean();
+if (!post) return res.status(404).json({ error: 'Post not found.' });
+
+const [group, user] = await Promise.all([
+  Group.findById(post.group).select('manager').lean(),
+  User.findOne({ username: req.session.username }).select('_id').lean(),
+]);
+
+const isAuthor = post.author.equals(user._id);
+const isManager = group.manager.equals(user._id);
+
+if (!isAuthor && !isManager) {
+  return res.status(403).json({ error: 'Only the post author or group manager can delete this post.' });
+}
+
+await Post.deleteOne({ _id: id });
+return res.status(200).json({ message: 'Post deleted successfully' });
+}
+
+module.exports = { listGroupPosts, createPost, deletePost };

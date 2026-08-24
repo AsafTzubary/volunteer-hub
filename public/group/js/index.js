@@ -105,8 +105,34 @@ async function confirmDelete() {
     alert(data.error || 'Failed to delete group.');
     return;
   }
-
   window.location.href = '/group/list.html';
+}
+
+let pendingDeletePostId = null;
+
+async function handleDeletePostClick(postId) {
+  pendingDeletePostId = postId;
+  bootstrap.Modal.getOrCreateInstance(document.getElementById('delete-post-modal')).show();
+  
+}
+
+async function confirmDeletePost() {
+  const confirmBtn = document.getElementById('confirm-delete-post-btn');
+  confirmBtn.disabled = true;
+
+  const res = await fetch('/api/posts/' + encodeURIComponent(pendingDeletePostId), { method: 'DELETE' });
+  const data = await res.json();
+
+  confirmBtn.disabled = false;
+
+  if (!res.ok) {
+    bootstrap.Modal.getInstance(document.getElementById('delete-post-modal')).hide();
+    alert(data.error || 'Failed to delete post.');
+    return;
+  } else {
+    document.querySelector('[data-post-id="' + pendingDeletePostId + '"]').remove();
+    bootstrap.Modal.getInstance(document.getElementById('delete-post-modal')).hide();
+  }
 }
 
 function renderActionButtons(group) {
@@ -132,38 +158,42 @@ function renderActionButtons(group) {
   }
 }
 
-function postCard(post) {
+function postCard(post, canDelete) {
   const authorName = post.author.fullName || post.author.username;
   const date = new Date(post.createdAt).toLocaleDateString();
   const media = post.postType === 'image' && post.imageUrl
     ? `<img src="${post.imageUrl}" alt="post image" class="img-fluid rounded mt-2" style="max-height:300px" />`
     : '';
   return `
-    <div class="border rounded p-3 mb-3">
+    <div class="border rounded p-3 mb-3" data-post-id="${post.id}">
       <div class="d-flex justify-content-between align-items-center mb-1">
         <a href="${profileUrl(post.author.username)}" class="fw-semibold text-decoration-none small">${authorName}</a>
         <span class="text-muted" style="font-size:0.72rem">${date}</span>
       </div>
       <p class="mb-0 small">${post.content}</p>
       ${media}
+      ${canDelete ? `<button class="btn btn-sm btn-outline-danger delete-post-btn mt-2" data-id="${post.id}">Delete</button>` : ''}
     </div>
   `;
 }
 
-function renderPosts(posts) {
+function renderPosts(posts, sessionUsername, isManager) {
   const list = document.getElementById('posts-list');
   if (!posts.length) {
     list.innerHTML = '<p class="text-muted small mb-0">No posts yet.</p>';
     return;
   }
-  list.innerHTML = posts.map(postCard).join('');
+  list.innerHTML = posts.map((post) => postCard(post, isManager || post.author.username === sessionUsername)).join('')
+  list.querySelectorAll('.delete-post-btn').forEach((btn) => {
+  btn.addEventListener('click', () => handleDeletePostClick(btn.dataset.id));
+  });
 }
 
-async function loadPosts(groupId) {
+async function loadPosts(groupId, sessionUsername, isManager) {
   const res = await fetch('/api/posts?groupId=' + encodeURIComponent(groupId));
   if (!res.ok) return;
   const posts = await res.json();
-  renderPosts(posts);
+  renderPosts(posts, sessionUsername, isManager);
 }
 
 function readFileAsBase64(file) {
@@ -206,7 +236,7 @@ function wirePostForm(groupId) {
     const list = document.getElementById('posts-list');
     const placeholder = list.querySelector('p.text-muted');
     if (placeholder) placeholder.remove();
-    list.insertAdjacentHTML('afterbegin', postCard(data));
+    list.insertAdjacentHTML('afterbegin', postCard(data, true));
 
     this.reset();
   });
@@ -243,6 +273,7 @@ async function init() {
   document.getElementById('my-profile-link').href = profileUrl(sessionUsername);
   wireLogout();
   document.getElementById('confirm-delete-btn').addEventListener('click', confirmDelete);
+  document.getElementById('confirm-delete-post-btn').addEventListener('click', confirmDeletePost);
 
   const groupId = targetGroupId();
   if (!groupId) {
@@ -261,7 +292,7 @@ async function init() {
   document.getElementById('group-content').classList.remove('d-none');
   renderGroup(group);
   wirePostForm(groupId);
-  loadPosts(groupId);
+  loadPosts(groupId, sessionUsername, group.isManager);
 }
 
 async function handleRemoveMember(groupId, username, btn){

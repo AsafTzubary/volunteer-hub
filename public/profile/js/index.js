@@ -146,11 +146,13 @@ async function init() {
   document.getElementById('add-friend-btn').addEventListener('click', async () => {
     await fetch('/api/users/' + encodeURIComponent(username) + '/friend', { method: 'POST' });
     document.getElementById('add-friend').classList.add('d-none');
+    document.getElementById('remove-friend').classList.remove('d-none');
   });
 
   document.getElementById('remove-friend-btn').addEventListener('click', async () => {
     await fetch('/api/users/' + encodeURIComponent(username) + '/friend', { method: 'DELETE' });
     document.getElementById('remove-friend').classList.add('d-none');
+    document.getElementById('add-friend').classList.remove('d-none');
   });
 
   const res = await fetch('/api/users/' + encodeURIComponent(username));

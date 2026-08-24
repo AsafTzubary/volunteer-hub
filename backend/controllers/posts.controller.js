@@ -113,4 +113,68 @@ async function createPost(req, res) {
   });
 }
 
-module.exports = { listGroupPosts, createPost };
+const FEED_PAGE_SIZE = 10;
+
+async function getFeed(req, res) {
+  const { before, after } = req.query;
+
+  const user = await User.findOne({ username: req.session.username })
+    .select('joinedGroups friends')
+    .lean();
+
+  const baseFilter = {
+    $or: [
+      { group: { $in: user.joinedGroups } },
+      { author: { $in: user.friends } },
+    ],
+  };
+
+  if (after) {
+    const afterDate = new Date(after);
+    if (isNaN(afterDate)) return res.status(400).json({ error: 'Invalid after date.' });
+
+    const posts = await Post.find({ ...baseFilter, createdAt: { $gt: afterDate } })
+      .populate('author', 'username fullName')
+      .populate('group', 'name')
+      .sort({ createdAt: -1 })
+      .lean();
+
+    return res.json({ posts: posts.map(formatPost), hasMore: false });
+  }
+
+  const filter = before
+    ? { ...baseFilter, createdAt: { $lt: new Date(before) } }
+    : baseFilter;
+
+  if (before && isNaN(new Date(before))) {
+    return res.status(400).json({ error: 'Invalid before date.' });
+  }
+
+  const posts = await Post.find(filter)
+    .populate('author', 'username fullName')
+    .populate('group', 'name')
+    .sort({ createdAt: -1 })
+    .limit(FEED_PAGE_SIZE + 1)
+    .lean();
+
+  const hasMore = posts.length > FEED_PAGE_SIZE;
+  const page = posts.slice(0, FEED_PAGE_SIZE);
+
+  res.json({ posts: page.map(formatPost), hasMore });
+}
+
+function formatPost(post) {
+  return {
+    id: post._id,
+    author: post.author,
+    group: post.group ? { id: post.group._id, name: post.group.name } : null,
+    content: post.content,
+    postType: post.postType,
+    imageUrl: post.imageUrl,
+    likesCount: post.likes ? post.likes.length : 0,
+    commentsCount: post.comments ? post.comments.length : 0,
+    createdAt: post.createdAt,
+  };
+}
+
+module.exports = { listGroupPosts, createPost, getFeed };

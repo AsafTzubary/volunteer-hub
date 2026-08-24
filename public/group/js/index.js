@@ -46,7 +46,7 @@ function renderMembers(members, isManager, groupId, managerUsername) {
   });
 
   list.querySelectorAll('.make-manager-btn').forEach((btn) => {
-    btn.addEventListener('click', () => handleTransferOwnership(groupId, btn.dataset.username, btn));
+    btn.addEventListener('click', () => handleTransferOwnership(groupId, btn.dataset.username));
   });
 }
 
@@ -115,20 +115,29 @@ async function confirmDelete() {
   window.location.href = '/group/list.html';
 }
 
-async function handleTransferOwnership(groupId, username, btn) {
-  const confirmed = confirm(`Make ${username} the new manager of this group? You will remain a regular member.`);
-  if (!confirmed) return;
+let pendingTransfer = null;
 
-  btn.disabled = true;
+function handleTransferOwnership(groupId, username) {
+  pendingTransfer = { groupId, username };
+  document.getElementById('transfer-target-name').textContent = username;
+  bootstrap.Modal.getOrCreateInstance(document.getElementById('transfer-ownership-modal')).show();
+}
+
+async function confirmTransfer() {
+  const confirmBtn = document.getElementById('confirm-transfer-btn');
+  confirmBtn.disabled = true;
+
   const res = await fetch(
-    '/api/groups/' + encodeURIComponent(groupId) + '/manager/' + encodeURIComponent(username),
+    '/api/groups/' + encodeURIComponent(pendingTransfer.groupId) + '/manager/' + encodeURIComponent(pendingTransfer.username),
     { method: 'POST' }
   );
   const data = await res.json();
 
+  confirmBtn.disabled = false;
+
   if (!res.ok) {
+    bootstrap.Modal.getInstance(document.getElementById('transfer-ownership-modal')).hide();
     alert(data.error || 'Failed to transfer ownership.');
-    btn.disabled = false;
     return;
   }
 
@@ -269,6 +278,7 @@ async function init() {
   document.getElementById('my-profile-link').href = profileUrl(sessionUsername);
   wireLogout();
   document.getElementById('confirm-delete-btn').addEventListener('click', confirmDelete);
+  document.getElementById('confirm-transfer-btn').addEventListener('click', confirmTransfer);
 
   const groupId = targetGroupId();
   if (!groupId) {

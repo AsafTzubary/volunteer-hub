@@ -29,7 +29,8 @@ router.get('/autocomplete', requireAuth, async (req, res) => {
   const data = await httpsGet(url);
 
   if (data.status !== 'OK' && data.status !== 'ZERO_RESULTS') {
-    return res.status(502).json({ error: 'Places API error.' });
+    console.error('Places autocomplete error:', data.status, data.error_message);
+    return res.status(502).json({ error: 'Places API error.', detail: data.status });
   }
 
   const suggestions = (data.predictions || []).map((p) => ({

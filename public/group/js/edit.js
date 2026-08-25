@@ -6,13 +6,10 @@ function populateForm(group) {
   document.getElementById('name').value = group.name || '';
   document.getElementById('category').value = group.category || '';
   document.getElementById('description').value = group.description || '';
-  document.getElementById('address').value = group.address || '';
-  document.getElementById('latitude').value = group.latitude ?? '';
-  document.getElementById('longitude').value = group.longitude ?? '';
 }
 
 function clearErrors() {
-  ['name', 'category', 'description', 'address', 'latitude', 'longitude'].forEach((field) => {
+  ['name', 'category', 'description'].forEach((field) => {
     const input = document.getElementById(field);
     const error = document.getElementById(field + '-error');
     input.classList.remove('is-invalid');
@@ -66,16 +63,10 @@ async function init() {
     e.preventDefault();
     clearErrors();
 
-    const latitude = document.getElementById('latitude').value;
-    const longitude = document.getElementById('longitude').value;
-
     const body = {
       name: document.getElementById('name').value.trim(),
       category: document.getElementById('category').value.trim(),
       description: document.getElementById('description').value.trim(),
-      address: document.getElementById('address').value.trim(),
-      ...(latitude !== '' && { latitude: Number(latitude) }),
-      ...(longitude !== '' && { longitude: Number(longitude) }),
     };
 
     const res = await fetch('/api/groups/' + encodeURIComponent(groupId), {

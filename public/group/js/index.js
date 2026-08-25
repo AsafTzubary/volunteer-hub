@@ -307,7 +307,6 @@ function wirePostForm(groupId) {
 function renderGroup(group) {
   document.getElementById('group-name').textContent = group.name;
   document.getElementById('group-category').textContent = group.category;
-  document.getElementById('group-address').textContent = group.address || '';
   document.getElementById('group-description').textContent =
     group.description || 'No description provided.';
   renderManager(group.manager);

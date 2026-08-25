@@ -153,6 +153,9 @@ function renderActionButtons(group) {
     const editBtn = document.getElementById('edit-group-btn');
     editBtn.href = '/group/edit.html?id=' + encodeURIComponent(group.id);
     editBtn.classList.remove('d-none');
+    const createEventBtn = document.getElementById('create-event-btn');
+    createEventBtn.href = '/event/create.html?groupId=' + encodeURIComponent(group.id);
+    createEventBtn.classList.remove('d-none');
     const deleteBtn = document.getElementById('delete-group-btn');
     deleteBtn.classList.remove('d-none');
     deleteBtn.disabled = false;
@@ -206,6 +209,59 @@ async function loadPosts(groupId, sessionUsername, isManager) {
   if (!res.ok) return;
   const posts = await res.json();
   renderPosts(posts, sessionUsername, isManager);
+}
+
+function formatEventDate(iso) {
+  return new Date(iso).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' });
+}
+
+function eventCard(event) {
+  const managerName = event.manager.fullName || event.manager.username;
+  return `
+    <div class="border rounded p-3">
+      <div class="d-flex justify-content-between align-items-center mb-1">
+        <span class="fw-semibold small">${event.title}</span>
+        <span class="category-badge">${event.category}</span>
+      </div>
+      <p class="text-muted small mb-1">${formatEventDate(event.date)}</p>
+      ${event.address ? `<p class="text-muted small mb-1">${event.address}</p>` : ''}
+      ${event.description ? `<p class="mb-1 small">${event.description}</p>` : ''}
+      <p class="text-muted small mb-0">${event.participantsCount}/${event.maxParticipants} participants · Organized by ${managerName}</p>
+    </div>
+  `;
+}
+
+let currentEvents = [];
+let currentEventIndex = 0;
+
+function renderCurrentEvent() {
+  const list = document.getElementById('events-list');
+  const nav = document.getElementById('events-nav');
+
+  if (!currentEvents.length) {
+    list.innerHTML = '<p class="text-muted small mb-0">No events scheduled yet.</p>';
+    nav.classList.remove('d-flex');
+    nav.classList.add('d-none');
+    return;
+  }
+
+  list.innerHTML = eventCard(currentEvents[currentEventIndex]);
+
+  document.getElementById('event-indicator').textContent =
+    `Event ${currentEventIndex + 1} of ${currentEvents.length}`;
+  document.getElementById('prev-event-btn').disabled = currentEventIndex === 0;
+  document.getElementById('next-event-btn').disabled = currentEventIndex === currentEvents.length - 1;
+
+  nav.classList.remove('d-none');
+  nav.classList.add('d-flex');
+}
+
+async function loadEvents(groupId) {
+  const res = await fetch('/api/events?groupId=' + encodeURIComponent(groupId));
+  if (!res.ok) return;
+  currentEvents = await res.json();
+  currentEventIndex = 0;
+  renderCurrentEvent();
 }
 
 function readFileAsBase64(file) {
@@ -278,6 +334,18 @@ async function init() {
   document.getElementById('confirm-delete-btn').addEventListener('click', confirmDelete);
   document.getElementById('confirm-delete-post-btn').addEventListener('click', confirmDeletePost);
   document.getElementById('confirm-transfer-btn').addEventListener('click', confirmTransfer);
+  document.getElementById('prev-event-btn').addEventListener('click', () => {
+    if (currentEventIndex > 0) {
+      currentEventIndex -= 1;
+      renderCurrentEvent();
+    }
+  });
+  document.getElementById('next-event-btn').addEventListener('click', () => {
+    if (currentEventIndex < currentEvents.length - 1) {
+      currentEventIndex += 1;
+      renderCurrentEvent();
+    }
+  });
   const groupId = targetGroupId();
   if (!groupId) {
     document.getElementById('not-found').classList.remove('d-none');
@@ -294,6 +362,7 @@ async function init() {
   renderGroup(group);
   wirePostForm(groupId);
   loadPosts(groupId, sessionUsername, group.isManager);
+  loadEvents(groupId);
 }
 
 async function handleRemoveMember(groupId, username, btn){

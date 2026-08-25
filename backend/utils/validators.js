@@ -13,6 +13,12 @@ const ADDRESS_MAX_LENGTH = 120;
 
 const POST_CONTENT_MAX_LENGTH = 2000;
 
+const EVENT_TITLE_MIN_LENGTH = 3;
+const EVENT_TITLE_MAX_LENGTH = 100;
+const EVENT_DESCRIPTION_MAX_LENGTH = 1000;
+const EVENT_MAX_PARTICIPANTS_MIN = 1;
+const EVENT_MAX_PARTICIPANTS_MAX = 500;
+
 function validateUsername(username) {
   if (username.length < USERNAME_MIN_LENGTH || username.length > USERNAME_MAX_LENGTH) {
     return `Username must be between ${USERNAME_MIN_LENGTH} and ${USERNAME_MAX_LENGTH} characters.`;
@@ -38,7 +44,7 @@ function validateGroupName(name) {
 }
 
 function validateCategory(category) {
-  if (category.trim().length === 0 || category.length > CATEGORY_MAX_LENGTH) {
+  if (!category || typeof category !== 'string' || category.trim().length === 0 || category.length > CATEGORY_MAX_LENGTH) {
     return `Category is required and must be at most ${CATEGORY_MAX_LENGTH} characters.`;
   }
   return null;
@@ -84,6 +90,39 @@ function validatePostContent(content) {
   return null;
 }
 
+function validateEventTitle(title) {
+  if (!title || title.trim().length < EVENT_TITLE_MIN_LENGTH || title.length > EVENT_TITLE_MAX_LENGTH) {
+    return `Event title must be between ${EVENT_TITLE_MIN_LENGTH} and ${EVENT_TITLE_MAX_LENGTH} characters.`;
+  }
+  return null;
+}
+
+function validateEventDescription(description) {
+  if (description.length > EVENT_DESCRIPTION_MAX_LENGTH) {
+    return `Description must be at most ${EVENT_DESCRIPTION_MAX_LENGTH} characters.`;
+  }
+  return null;
+}
+
+function validateEventDate(date) {
+  const parsed = new Date(date);
+  if (Number.isNaN(parsed.getTime())) {
+    return 'A valid event date is required.';
+  }
+  if (parsed <= new Date()) {
+    return 'Event date must be in the future.';
+  }
+  return null;
+}
+
+function validateMaxParticipants(value) {
+  const number = Number(value);
+  if (!Number.isInteger(number) || number < EVENT_MAX_PARTICIPANTS_MIN || number > EVENT_MAX_PARTICIPANTS_MAX) {
+    return `Max participants must be a whole number between ${EVENT_MAX_PARTICIPANTS_MIN} and ${EVENT_MAX_PARTICIPANTS_MAX}.`;
+  }
+  return null;
+}
+
 module.exports = {
   USERNAME_MIN_LENGTH,
   USERNAME_MAX_LENGTH,
@@ -95,6 +134,11 @@ module.exports = {
   GROUP_DESCRIPTION_MAX_LENGTH,
   CATEGORY_MAX_LENGTH,
   ADDRESS_MAX_LENGTH,
+  EVENT_TITLE_MIN_LENGTH,
+  EVENT_TITLE_MAX_LENGTH,
+  EVENT_DESCRIPTION_MAX_LENGTH,
+  EVENT_MAX_PARTICIPANTS_MIN,
+  EVENT_MAX_PARTICIPANTS_MAX,
   validateUsername,
   validatePassword,
   validateGroupName,
@@ -104,4 +148,8 @@ module.exports = {
   validateLatitude,
   validateLongitude,
   validatePostContent,
+  validateEventTitle,
+  validateEventDescription,
+  validateEventDate,
+  validateMaxParticipants,
 };

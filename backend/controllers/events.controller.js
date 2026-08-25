@@ -20,7 +20,7 @@ async function listGroupEvents(req, res) {
     return res.status(400).json({ error: 'Valid groupId is required.' });
   }
 
-  const events = await Event.find({ group: groupId })
+  const events = await Event.find({ group: groupId, date: { $gte: new Date() } })
     .populate('manager', 'username fullName')
     .sort({ date: 1 })
     .lean();

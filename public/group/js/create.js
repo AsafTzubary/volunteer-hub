@@ -23,16 +23,10 @@ async function init() {
     const saveBtn = document.getElementById('save-btn');
     saveBtn.disabled = true;
 
-    const latitude = document.getElementById('latitude').value;
-    const longitude = document.getElementById('longitude').value;
-
     const payload = {
       name: document.getElementById('name').value.trim(),
       category: document.getElementById('category').value.trim(),
       description: document.getElementById('description').value.trim(),
-      address: document.getElementById('address').value.trim(),
-      ...(latitude !== '' && { latitude: Number(latitude) }),
-      ...(longitude !== '' && { longitude: Number(longitude) }),
     };
 
     const res = await fetch('/api/groups', {

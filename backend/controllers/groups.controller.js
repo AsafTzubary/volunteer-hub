@@ -6,9 +6,6 @@ const {
   validateGroupName,
   validateCategory,
   validateGroupDescription,
-  validateAddress,
-  validateLatitude,
-  validateLongitude,
 } = require('../utils/validators');
 
 const GROUPS_PAGE_SIZE = 9;
@@ -19,7 +16,7 @@ async function listGroups(req, res) {
 
   const [groups, totalCount] = await Promise.all([
     Group.find({})
-      .select('name category address manager members createdAt')
+      .select('name category manager members createdAt')
       .populate('manager', 'username fullName')
       .sort({ createdAt: -1 })
       .skip(skip)
@@ -33,7 +30,6 @@ async function listGroups(req, res) {
       id: group._id,
       name: group.name,
       category: group.category,
-      address: group.address,
       manager: group.manager,
       memberCount: group.members.length,
     })),
@@ -68,9 +64,6 @@ async function getGroupDetails(req, res) {
     name: group.name,
     description: group.description,
     category: group.category,
-    address: group.address,
-    latitude: group.latitude,
-    longitude: group.longitude,
     manager: group.manager,
     members: group.members,
     memberCount: group.members.length,
@@ -92,7 +85,7 @@ async function getManagedGroup(req, res) {
 }
 
 async function createGroup(req, res) {
-  const { name, category, description = '', address = '', latitude, longitude } = req.body;
+  const { name, category, description = '' } = req.body;
 
   const nameError = validateGroupName(name);
   if (nameError) return res.status(400).json({ error: nameError });
@@ -102,19 +95,6 @@ async function createGroup(req, res) {
 
   const descriptionError = validateGroupDescription(description);
   if (descriptionError) return res.status(400).json({ error: descriptionError });
-
-  const addressError = validateAddress(address);
-  if (addressError) return res.status(400).json({ error: addressError });
-
-  if (latitude !== undefined) {
-    const latitudeError = validateLatitude(latitude);
-    if (latitudeError) return res.status(400).json({ error: latitudeError });
-  }
-
-  if (longitude !== undefined) {
-    const longitudeError = validateLongitude(longitude);
-    if (longitudeError) return res.status(400).json({ error: longitudeError });
-  }
 
   const manager = await User.findOne({ username: req.session.username }).select('_id').lean();
 
@@ -130,9 +110,6 @@ async function createGroup(req, res) {
     name: name.trim(),
     category: category.trim(),
     description: description.trim(),
-    address: address.trim(),
-    ...(latitude !== undefined && { latitude: Number(latitude) }),
-    ...(longitude !== undefined && { longitude: Number(longitude) }),
     manager: manager._id,
     members: [manager._id],
   });
@@ -159,7 +136,7 @@ async function updateGroup(req, res) {
     return res.status(403).json({ error: 'Only the group manager can edit this group.' });
   }
 
-  const { name, category, description, address, latitude, longitude } = req.body;
+  const { name, category, description } = req.body;
   const errors = {};
 
   if (name !== undefined) {
@@ -177,21 +154,6 @@ async function updateGroup(req, res) {
     if (descriptionError) errors.description = descriptionError;
   }
 
-  if (address !== undefined) {
-    const addressError = validateAddress(address);
-    if (addressError) errors.address = addressError;
-  }
-
-  if (latitude !== undefined) {
-    const latitudeError = validateLatitude(latitude);
-    if (latitudeError) errors.latitude = latitudeError;
-  }
-
-  if (longitude !== undefined) {
-    const longitudeError = validateLongitude(longitude);
-    if (longitudeError) errors.longitude = longitudeError;
-  }
-
   if (Object.keys(errors).length > 0) {
     return res.status(400).json({ errors });
   }
@@ -200,9 +162,6 @@ async function updateGroup(req, res) {
   if (name !== undefined) updates.name = name.trim();
   if (category !== undefined) updates.category = category.trim();
   if (description !== undefined) updates.description = description.trim();
-  if (address !== undefined) updates.address = address.trim();
-  if (latitude !== undefined) updates.latitude = Number(latitude);
-  if (longitude !== undefined) updates.longitude = Number(longitude);
 
   const updatedGroup = await Group.findByIdAndUpdate(id, { $set: updates }, { new: true, lean: true });
 
@@ -211,9 +170,6 @@ async function updateGroup(req, res) {
     name: updatedGroup.name,
     category: updatedGroup.category,
     description: updatedGroup.description,
-    address: updatedGroup.address,
-    latitude: updatedGroup.latitude,
-    longitude: updatedGroup.longitude,
   });
 }
 

@@ -11,7 +11,6 @@ function groupCard(group) {
         <div class="card shadow-sm p-3 h-100">
           <span class="category-badge mb-2">${group.category}</span>
           <h2 class="h6 mb-1">${group.name}</h2>
-          <p class="text-muted small mb-1">${group.address || 'No address listed'}</p>
           <p class="text-muted small mb-1">Managed by ${managerName}</p>
           <p class="text-muted small mb-0">${group.memberCount} ${memberLabel}</p>
         </div>

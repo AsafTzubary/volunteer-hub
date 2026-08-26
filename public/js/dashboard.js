@@ -1,6 +1,33 @@
 let newestPostDate = null;
 let oldestPostDate = null;
 
+function formatEventDate(iso) {
+  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+async function loadUpcomingEvents() {
+  const res = await fetch('/api/events/upcoming');
+  if (!res.ok) return;
+  const events = await res.json();
+
+  const list = document.getElementById('upcoming-events-list');
+  if (!events.length) {
+    list.innerHTML = '<li class="text-muted small">No upcoming events.</li>';
+    return;
+  }
+
+  const mine = events.filter((e) => e.isParticipant);
+  const others = events.filter((e) => !e.isParticipant);
+  const sorted = [...mine, ...others];
+
+  list.innerHTML = sorted.map((event) => `
+    <li class="mb-2">
+      <div class="small fw-semibold">${event.title}</div>
+      <div class="text-muted" style="font-size:0.72rem">${formatEventDate(event.date)} · ${event.group.name}</div>
+    </li>
+  `).join('');
+}
+
 function renderJoinedGroups(groups) {
   const list = document.getElementById('joined-groups-list');
   if (!groups.length) {
@@ -111,6 +138,7 @@ async function init() {
 
   document.getElementById('load-more-btn').addEventListener('click', loadMore);
 
+  loadUpcomingEvents();
   await loadFeed();
 
   setInterval(pollNewPosts, 15000);

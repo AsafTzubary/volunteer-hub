@@ -129,4 +129,68 @@ async function createEvent(req, res) {
   });
 }
 
-module.exports = { listGroupEvents, createEvent };
+async function listUpcomingEvents(req, res) {
+  const user = await User.findOne({ username: req.session.username })
+    .select('joinedGroups _id')
+    .lean();
+
+  if (!user) return res.status(401).json({ error: 'Not authenticated.' });
+
+  const events = await Event.find({
+    group: { $in: user.joinedGroups },
+    date: { $gte: new Date() },
+    status: { $ne: 'cancelled' },
+  })
+    .populate('manager', 'username fullName')
+    .populate('group', 'name')
+    .sort({ date: 1 })
+    .lean();
+
+  const userId = user._id.toString();
+
+  res.json(
+    events.map((event) => ({
+      id: event._id,
+      title: event.title,
+      category: event.category,
+      description: event.description,
+      address: event.address,
+      date: event.date,
+      maxParticipants: event.maxParticipants,
+      participantsCount: event.participants.length,
+      status: event.status,
+      manager: event.manager,
+      group: { id: event.group._id, name: event.group.name },
+      isParticipant: event.participants.some((p) => p.toString() === userId),
+    }))
+  );
+}
+
+async function listAllUpcomingEvents(req, res) {
+  const events = await Event.find({
+    date: { $gte: new Date() },
+    status: { $ne: 'cancelled' },
+  })
+    .populate('manager', 'username fullName')
+    .populate('group', 'name')
+    .sort({ date: 1 })
+    .lean();
+
+  res.json(
+    events.map((event) => ({
+      id: event._id,
+      title: event.title,
+      category: event.category,
+      description: event.description,
+      address: event.address,
+      date: event.date,
+      maxParticipants: event.maxParticipants,
+      participantsCount: event.participants.length,
+      status: event.status,
+      manager: event.manager,
+      group: { id: event.group._id, name: event.group.name },
+    }))
+  );
+}
+
+module.exports = { listGroupEvents, createEvent, listUpcomingEvents, listAllUpcomingEvents };

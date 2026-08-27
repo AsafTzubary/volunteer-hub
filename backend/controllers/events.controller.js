@@ -193,4 +193,41 @@ async function listAllUpcomingEvents(req, res) {
   );
 }
 
-module.exports = { listGroupEvents, createEvent, listUpcomingEvents, listAllUpcomingEvents };
+async function getEventDetails(req, res){
+  const { id } = req.params;
+  if (!mongoose.isValidObjectId(id)) return res.status(404).json({ error: 'Event not found.' });
+
+  const viewerUsername = req.session.username;
+
+  const [event, viewer] = await Promise.all([
+    Event.findById(id)
+      .populate('group', 'name')
+      .populate('manager', 'username fullName')
+      .lean(),
+      User.findOne({ username: viewerUsername }).select('_id').lean()
+  ]);
+  
+  if (!event) return res.status(404).json({ error: 'Event not found.' });
+  const isManager = event.manager?.username === viewerUsername;
+  const isParticipant = event.participants.some((p) => p.equals(viewer._id));
+
+  res.json({
+      id: event._id,
+      title: event.title,
+      description: event.description,
+      category: event.category,
+      address: event.address,
+      date: event.date,
+      maxParticipants: event.maxParticipants,
+      participantsCount: event.participants.length,
+      availablePlaces: event.maxParticipants - event.participants.length,
+      status: event.status,
+      group: event.group,
+      manager: event.manager,
+      isManager,
+      isParticipant,
+    });
+
+}
+
+module.exports = { listGroupEvents, createEvent, listUpcomingEvents, listAllUpcomingEvents, getEventDetails };

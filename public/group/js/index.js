@@ -215,10 +215,33 @@ function formatEventDate(iso) {
   return new Date(iso).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' });
 }
 
-function eventCard(event) {
+const RSVP_OPTIONS = [
+  { value: 'going', label: 'Going' },
+  { value: 'interested', label: 'Interested' },
+  { value: 'not_going', label: 'Not Going' },
+];
+
+function participantsText(event) {
+  return `${event.participantsCount}/${event.maxParticipants} participants`;
+}
+
+function rsvpCountsText(event) {
+  return `${event.interestedCount} interested, ${event.notGoingCount} not going`;
+}
+
+function rsvpButtons(event) {
+  const isFull = event.participantsCount >= event.maxParticipants && event.myStatus !== 'going';
+  return RSVP_OPTIONS.map((option) => {
+    const style = option.value === event.myStatus ? 'btn-primary' : 'btn-outline-primary';
+    const disabled = option.value === 'going' && isFull ? ' disabled' : '';
+    return `<button type="button" class="btn btn-sm ${style} rsvp-btn" data-status="${option.value}"${disabled}>${option.label}</button>`;
+  }).join('');
+}
+
+function eventCard(event, canRsvp, canDelete) {
   const managerName = event.manager.fullName || event.manager.username;
   return `
-    <div class="border rounded p-3">
+    <div class="border rounded p-3" data-event-id="${event.id}">
       <div class="d-flex justify-content-between align-items-center mb-1">
         <span class="fw-semibold small">${event.title}</span>
         <span class="category-badge">${event.category}</span>
@@ -226,13 +249,57 @@ function eventCard(event) {
       <p class="text-muted small mb-1">${formatEventDate(event.date)}</p>
       ${event.address ? `<p class="text-muted small mb-1">${event.address}</p>` : ''}
       ${event.description ? `<p class="mb-1 small">${event.description}</p>` : ''}
-      <p class="text-muted small mb-0">${event.participantsCount}/${event.maxParticipants} participants · Organized by ${managerName}</p>
+      <p class="text-muted small mb-0">
+        <span class="participants-count">${participantsText(event)}</span> · Organized by ${managerName}
+      </p>
+      <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mt-2">
+        <div class="btn-group">${canRsvp ? rsvpButtons(event) : ''}</div>
+        <span class="rsvp-counts text-muted" style="font-size:0.72rem">${rsvpCountsText(event)}</span>
+      </div>
+      ${canDelete ? `<button class="btn btn-sm btn-outline-danger delete-event-btn mt-2" data-id="${event.id}">Delete</button>` : ''}
     </div>
   `;
 }
 
+function refreshRsvpState(card, event) {
+  const isFull = event.participantsCount >= event.maxParticipants && event.myStatus !== 'going';
+  card.querySelectorAll('.rsvp-btn').forEach((btn) => {
+    const isActive = btn.dataset.status === event.myStatus;
+    btn.classList.toggle('btn-primary', isActive);
+    btn.classList.toggle('btn-outline-primary', !isActive);
+    btn.disabled = btn.dataset.status === 'going' && isFull;
+  });
+  card.querySelector('.participants-count').textContent = participantsText(event);
+  card.querySelector('.rsvp-counts').textContent = rsvpCountsText(event);
+}
+
+async function handleRsvpClick(card, btn) {
+  // Clicking the active option clears the response.
+  const status = btn.classList.contains('btn-primary') ? null : btn.dataset.status;
+  const buttons = card.querySelectorAll('.rsvp-btn');
+  buttons.forEach((b) => (b.disabled = true));
+
+  const res = await fetch('/api/events/' + encodeURIComponent(card.dataset.eventId) + '/rsvp', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ status }),
+  });
+  const data = await res.json();
+  buttons.forEach((b) => (b.disabled = false));
+
+  if (!res.ok) {
+    alert(data.error || 'Failed to update your response.');
+    return;
+  }
+
+  Object.assign(currentEvents[currentEventIndex], data);
+  refreshRsvpState(card, data);
+}
+
 let currentEvents = [];
 let currentEventIndex = 0;
+let eventsContext = null;
+let pendingDeleteEventId = null;
 
 function renderCurrentEvent() {
   const list = document.getElementById('events-list');
@@ -245,7 +312,9 @@ function renderCurrentEvent() {
     return;
   }
 
-  list.innerHTML = eventCard(currentEvents[currentEventIndex]);
+  const event = currentEvents[currentEventIndex];
+  list.innerHTML = eventCard(event, eventsContext.canRsvp, eventsContext.isManager);
+  wireEventCard(list);
 
   document.getElementById('event-indicator').textContent =
     `Event ${currentEventIndex + 1} of ${currentEvents.length}`;
@@ -256,8 +325,44 @@ function renderCurrentEvent() {
   nav.classList.add('d-flex');
 }
 
-async function loadEvents(groupId) {
-  const res = await fetch('/api/events?groupId=' + encodeURIComponent(groupId));
+function wireEventCard(list) {
+  const card = list.querySelector('[data-event-id]');
+  if (!card) return;
+  card.querySelectorAll('.rsvp-btn').forEach((btn) => {
+    btn.addEventListener('click', () => handleRsvpClick(card, btn));
+  });
+  const deleteBtn = card.querySelector('.delete-event-btn');
+  if (deleteBtn) {
+    deleteBtn.addEventListener('click', () => handleDeleteEventClick(deleteBtn.dataset.id));
+  }
+}
+
+function handleDeleteEventClick(eventId) {
+  pendingDeleteEventId = eventId;
+  bootstrap.Modal.getOrCreateInstance(document.getElementById('delete-event-modal')).show();
+}
+
+async function confirmDeleteEvent() {
+  const confirmBtn = document.getElementById('confirm-delete-event-btn');
+  confirmBtn.disabled = true;
+  const res = await fetch('/api/events/' + encodeURIComponent(pendingDeleteEventId), { method: 'DELETE' });
+  const data = await res.json();
+  confirmBtn.disabled = false;
+  bootstrap.Modal.getInstance(document.getElementById('delete-event-modal')).hide();
+  if (!res.ok) {
+    alert(data.error || 'Failed to delete event.');
+    return;
+  }
+  currentEvents = currentEvents.filter((event) => event.id !== pendingDeleteEventId);
+  if (currentEventIndex >= currentEvents.length) {
+    currentEventIndex = Math.max(0, currentEvents.length - 1);
+  }
+  renderCurrentEvent();
+}
+
+async function loadEvents(group) {
+  eventsContext = { isManager: group.isManager, canRsvp: group.isManager || group.isMember };
+  const res = await fetch('/api/events?groupId=' + encodeURIComponent(group.id));
   if (!res.ok) return;
   currentEvents = await res.json();
   currentEventIndex = 0;
@@ -333,6 +438,7 @@ async function init() {
   document.getElementById('confirm-delete-btn').addEventListener('click', confirmDelete);
   document.getElementById('confirm-delete-post-btn').addEventListener('click', confirmDeletePost);
   document.getElementById('confirm-transfer-btn').addEventListener('click', confirmTransfer);
+  document.getElementById('confirm-delete-event-btn').addEventListener('click', confirmDeleteEvent);
   document.getElementById('prev-event-btn').addEventListener('click', () => {
     if (currentEventIndex > 0) {
       currentEventIndex -= 1;
@@ -361,7 +467,7 @@ async function init() {
   renderGroup(group);
   wirePostForm(groupId);
   loadPosts(groupId, sessionUsername, group.isManager);
-  loadEvents(groupId);
+  loadEvents(group);
 }
 
 async function handleRemoveMember(groupId, username, btn){

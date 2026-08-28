@@ -19,6 +19,8 @@ const EVENT_DESCRIPTION_MAX_LENGTH = 1000;
 const EVENT_MAX_PARTICIPANTS_MIN = 1;
 const EVENT_MAX_PARTICIPANTS_MAX = 500;
 
+const RSVP_STATUSES = ['going', 'interested', 'not_going'];
+
 function validateUsername(username) {
   if (username.length < USERNAME_MIN_LENGTH || username.length > USERNAME_MAX_LENGTH) {
     return `Username must be between ${USERNAME_MIN_LENGTH} and ${USERNAME_MAX_LENGTH} characters.`;
@@ -123,6 +125,13 @@ function validateMaxParticipants(value) {
   return null;
 }
 
+function validateRsvpStatus(status) {
+  if (!RSVP_STATUSES.includes(status)) {
+    return 'Invalid RSVP status.';
+  }
+  return null;
+}
+
 module.exports = {
   USERNAME_MIN_LENGTH,
   USERNAME_MAX_LENGTH,
@@ -139,6 +148,7 @@ module.exports = {
   EVENT_DESCRIPTION_MAX_LENGTH,
   EVENT_MAX_PARTICIPANTS_MIN,
   EVENT_MAX_PARTICIPANTS_MAX,
+  RSVP_STATUSES,
   validateUsername,
   validatePassword,
   validateGroupName,
@@ -152,4 +162,5 @@ module.exports = {
   validateEventDescription,
   validateEventDate,
   validateMaxParticipants,
+  validateRsvpStatus,
 };

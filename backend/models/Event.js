@@ -1,9 +1,18 @@
 const mongoose = require('mongoose');
+const { RSVP_STATUSES } = require('../utils/validators');
 
 const TITLE_MIN_LENGTH = 3;
 const TITLE_MAX_LENGTH = 100;
 const DESCRIPTION_MAX_LENGTH = 1000;
 const EVENT_STATUSES = ['upcoming', 'completed', 'cancelled'];
+
+const rsvpSchema = new mongoose.Schema(
+  {
+    user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    status: { type: String, enum: RSVP_STATUSES, required: true },
+  },
+  { _id: false }
+);
 
 const eventSchema = new mongoose.Schema(
   {
@@ -60,12 +69,13 @@ const eventSchema = new mongoose.Schema(
       min: 1,
       max: 500,
     },
-    participants: {
-      type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+    rsvps: {
+      type: [rsvpSchema],
       default: [],
       validate: {
         validator: function (value) {
-          return this.maxParticipants === undefined || value.length <= this.maxParticipants;
+          const going = value.filter((rsvp) => rsvp.status === 'going').length;
+          return this.maxParticipants === undefined || going <= this.maxParticipants;
         },
         message: 'Number of participants cannot exceed maxParticipants.',
       },

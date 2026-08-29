@@ -70,6 +70,13 @@ function daysFromNow(days) {
   return d;
 }
 
+function monthsAgo(months) {
+  const d = new Date();
+  d.setMonth(d.getMonth() - months);
+  d.setDate(15);
+  return d;
+}
+
 function httpsGet(url) {
   return new Promise((resolve) => {
     https.get(url, (res) => {
@@ -358,6 +365,75 @@ async function seed() {
   const geocodedEvents = await geocodeEvents(eventsData);
   await Event.insertMany(geocodedEvents);
   console.log(`Created ${geocodedEvents.length} events.`);
+
+  const pastEvents = [
+    {
+      title: 'Winter Park Clean-Up',        category: 'Environment',         date: monthsAgo(12), group: greenGroup._id,   manager: by['sarahjones']._id,  address: '120 Park Ave, New York, NY',           latitude: 40.7484,  longitude: -73.9967,  maxParticipants: 50,  status: 'completed',
+      rsvps: [by['sarahjones'], by['tomwilson'], by['annawhite']].map(u => ({ user: u._id, status: 'going' })),
+    },
+    {
+      title: 'Tutoring Winter Session',      category: 'Education',           date: monthsAgo(11), group: eduGroup._id,     manager: by['mikechen']._id,    address: '55 Mission St, San Francisco, CA',     latitude: 37.7886,  longitude: -122.3994, maxParticipants: 40,  status: 'completed',
+      rsvps: [by['mikechen'], by['jamestaylor'], by['mayapatel'], by['lisagarcia']].map(u => ({ user: u._id, status: 'going' })),
+    },
+    {
+      title: 'Community Soup Kitchen',       category: 'Food & Community',    date: monthsAgo(11), group: kitchenGroup._id, manager: by['emilypark']._id,   address: '890 N Michigan Ave, Chicago, IL',       latitude: 41.8966,  longitude: -87.6239,  maxParticipants: 25,  status: 'completed',
+      rsvps: [by['emilypark'], by['annawhite'], by['rachelbrown']].map(u => ({ user: u._id, status: 'going' })),
+    },
+    {
+      title: 'Spring Adoption Drive',        category: 'Animals',             date: monthsAgo(10), group: pawsGroup._id,    manager: by['rachelbrown']._id, address: '240 Newbury St, Boston, MA',           latitude: 42.3509,  longitude: -71.0761,  maxParticipants: 35,  status: 'completed',
+      rsvps: [by['rachelbrown'], by['sarahjones'], by['lisagarcia'], by['annawhite'], by['emilypark']].map(u => ({ user: u._id, status: 'going' })),
+    },
+    {
+      title: 'Spring 5K Charity Run',        category: 'Health & Fitness',    date: monthsAgo(9),  group: runnersGroup._id, manager: by['davidkim']._id,    address: 'Zilker Park, Austin, TX',              latitude: 30.2672,  longitude: -97.7431,  maxParticipants: 150, status: 'completed',
+      rsvps: [by['davidkim'], by['jamestaylor'], by['tomwilson'], by['mayapatel'], by['admin'], by['mikechen']].map(u => ({ user: u._id, status: 'going' })),
+    },
+    {
+      title: 'Community Mural Kickoff',      category: 'Arts & Culture',      date: monthsAgo(9),  group: artsGroup._id,    manager: by['lisagarcia']._id,  address: '700 Brickell Ave, Miami, FL',          latitude: 25.7617,  longitude: -80.1918,  maxParticipants: 30,  status: 'completed',
+      rsvps: [by['lisagarcia'], by['annawhite'], by['carlosrivera']].map(u => ({ user: u._id, status: 'going' })),
+    },
+    {
+      title: 'Summer Trail Day',             category: 'Outdoors',            date: monthsAgo(8),  group: hikingGroup._id,  manager: by['tomwilson']._id,   address: 'Discovery Park, Seattle, WA',          latitude: 47.6062,  longitude: -122.3321, maxParticipants: 35,  status: 'completed',
+      rsvps: [by['tomwilson'], by['davidkim'], by['jamestaylor'], by['sarahjones']].map(u => ({ user: u._id, status: 'going' })),
+    },
+    {
+      title: 'Youth Summer Sports Clinic',   category: 'Sports & Recreation', date: monthsAgo(7),  group: sportsGroup._id,  manager: by['jamestaylor']._id, address: 'Denver Recreation Center, Denver, CO', latitude: 39.7559,  longitude: -104.9942, maxParticipants: 50,  status: 'completed',
+      rsvps: [by['jamestaylor'], by['davidkim'], by['tomwilson'], by['mikechen'], by['mayapatel']].map(u => ({ user: u._id, status: 'going' })),
+    },
+    {
+      title: 'Zero-Waste Summer Fair',       category: 'Sustainability',      date: monthsAgo(6),  group: sustainGroup._id, manager: by['annawhite']._id,   address: '408 NW Couch St, Portland, OR',        latitude: 45.5231,  longitude: -122.6765, maxParticipants: 50,  status: 'completed',
+      rsvps: [by['annawhite'], by['sarahjones'], by['mayapatel'], by['emilypark']].map(u => ({ user: u._id, status: 'going' })),
+    },
+    {
+      title: 'Senior Companion Day',         category: 'Healthcare',          date: monthsAgo(5),  group: seniorGroup._id,  manager: by['carlosrivera']._id,address: '6300 Wilshire Blvd, Los Angeles, CA',  latitude: 34.0626,  longitude: -118.3717, maxParticipants: 30,  status: 'completed',
+      rsvps: [by['carlosrivera'], by['lisagarcia'], by['mikechen']].map(u => ({ user: u._id, status: 'going' })),
+    },
+    {
+      title: 'Nonprofit Tech Sprint',        category: 'Technology',          date: monthsAgo(4),  group: techGroup._id,    manager: by['mayapatel']._id,   address: '701 Brazos St, Austin, TX',            latitude: 30.2669,  longitude: -97.7428,  maxParticipants: 40,  status: 'completed',
+      rsvps: [by['mayapatel'], by['mikechen'], by['jamestaylor'], by['carlosrivera'], by['davidkim'], by['admin']].map(u => ({ user: u._id, status: 'going' })),
+    },
+    {
+      title: 'Fall Safety Walk',             category: 'Community Safety',    date: monthsAgo(3),  group: watchGroup._id,   manager: by['admin']._id,       address: 'City Hall, New York, NY',              latitude: 40.7128,  longitude: -74.0059,  maxParticipants: 50,  status: 'completed',
+      rsvps: [by['admin'], by['carlosrivera'], by['lisagarcia'], by['rachelbrown']].map(u => ({ user: u._id, status: 'going' })),
+    },
+    {
+      title: 'Autumn Park Restoration',      category: 'Environment',         date: monthsAgo(2),  group: greenGroup._id,   manager: by['sarahjones']._id,  address: 'Riverside Park, New York, NY',         latitude: 40.8004,  longitude: -73.9721,  maxParticipants: 40,  status: 'completed',
+      rsvps: [by['sarahjones'], by['tomwilson'], by['annawhite'], by['emilypark'], by['admin']].map(u => ({ user: u._id, status: 'going' })),
+    },
+    {
+      title: 'After-School Reading Blitz',   category: 'Education',           date: monthsAgo(2),  group: eduGroup._id,     manager: by['mikechen']._id,    address: 'SF Public Library, San Francisco, CA', latitude: 37.7786,  longitude: -122.4160, maxParticipants: 30,  status: 'completed',
+      rsvps: [by['mikechen'], by['mayapatel'], by['jamestaylor'], by['lisagarcia']].map(u => ({ user: u._id, status: 'going' })),
+    },
+    {
+      title: 'Harvest Feast Prep',           category: 'Food & Community',    date: monthsAgo(1),  group: kitchenGroup._id, manager: by['emilypark']._id,   address: '890 N Michigan Ave, Chicago, IL',       latitude: 41.8966,  longitude: -87.6239,  maxParticipants: 25,  status: 'completed',
+      rsvps: [by['emilypark'], by['annawhite'], by['rachelbrown'], by['davidkim'], by['carlosrivera']].map(u => ({ user: u._id, status: 'going' })),
+    },
+    {
+      title: 'Rescue & Rehome Day',          category: 'Animals',             date: monthsAgo(1),  group: pawsGroup._id,    manager: by['rachelbrown']._id, address: 'Boston Common, Boston, MA',            latitude: 42.3551,  longitude: -71.0657,  maxParticipants: 35,  status: 'completed',
+      rsvps: [by['rachelbrown'], by['sarahjones'], by['lisagarcia'], by['annawhite']].map(u => ({ user: u._id, status: 'going' })),
+    },
+  ];
+  await Event.insertMany(pastEvents);
+  console.log(`Created ${pastEvents.length} past events with RSVPs.`);
 
   const img = {
     green:  saveImage(76,  175, 80),

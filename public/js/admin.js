@@ -13,7 +13,15 @@ async function init() {
   wireLogout();
 
   loadMembersByCategory();
-  loadRegistrationsByMonth();
+
+  const now = new Date();
+  const toVal = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  const fromDate = new Date(now.getFullYear(), now.getMonth() - 11, 1);
+  const fromVal = `${fromDate.getFullYear()}-${String(fromDate.getMonth() + 1).padStart(2, '0')}`;
+  document.getElementById('filter-from').value = fromVal;
+  document.getElementById('filter-to').value = toVal;
+
+  loadRegistrationsByMonth(fromVal, toVal);
 
   document.getElementById('filter-apply').addEventListener('click', () => {
     const from = document.getElementById('filter-from').value;

@@ -61,11 +61,15 @@ router.post('/logout', (req, res) => {
   });
 });
 
-router.get('/me', (req, res) => {
+router.get('/me', async (req, res) => {
   if (!req.session.username) {
     return res.status(401).json({ error: 'Not logged in.' });
   }
-  res.json({ username: req.session.username });
+  const user = await User.findOne({ username: req.session.username }).select('username role fullName');
+  if (!user) {
+    return res.status(401).json({ error: 'Not logged in.' });
+  }
+  res.json({ username: user.username, role: user.role, fullName: user.fullName });
 });
 
 module.exports = router;

@@ -33,8 +33,15 @@ async function main() {
     return;
   }
 
-  const page = await verifyPageAccess();
-  console.log(`Credentials: valid. Page "${page.name}" (${page.id}).`);
+  // Reading a Page needs pages_read_engagement while posting needs
+  // pages_manage_posts, so a failed read is a warning, not a reason to stop.
+  try {
+    const page = await verifyPageAccess();
+    console.log(`Page access: OK. Target is "${page.name}" (${page.id}).`);
+  } catch (err) {
+    console.warn(`Page access check failed: ${err.message}`);
+    console.warn("This check needs pages_read_engagement. Posting needs pages_manage_posts, so continuing.");
+  }
 
   if (!shouldPost) {
     console.log('\nDry run. Re-run with --post to publish this to the Page for real.');

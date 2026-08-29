@@ -163,15 +163,39 @@ async function loadRegistrationsByMonth(from, to) {
   if (!res.ok) return;
   const data = await res.json();
 
-  if (!data.length) {
+  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+  let startYear, startMonth, endYear, endMonth;
+  if (from) {
+    [startYear, startMonth] = from.split('-').map(Number);
+  } else if (data.length) {
+    startYear = data[0].year;
+    startMonth = data[0].month;
+  }
+  if (to) {
+    [endYear, endMonth] = to.split('-').map(Number);
+  } else if (data.length) {
+    endYear = data[data.length - 1].year;
+    endMonth = data[data.length - 1].month;
+  }
+
+  if (!startYear) {
     d3.select(container).append('p')
       .attr('class', 'text-muted small no-data-msg')
       .text('No registration data for the selected period.');
     return;
   }
 
-  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  const labeled = data.map(d => ({ ...d, label: `${monthNames[d.month - 1]} ${d.year}` }));
+  const lookup = new Map(data.map(d => [`${d.year}-${d.month}`, d.count]));
+  const filled = [];
+  let cy = startYear, cm = startMonth;
+  while (cy < endYear || (cy === endYear && cm <= endMonth)) {
+    filled.push({ year: cy, month: cm, count: lookup.get(`${cy}-${cm}`) || 0 });
+    cm++;
+    if (cm > 12) { cm = 1; cy++; }
+  }
+
+  const labeled = filled.map(d => ({ ...d, label: `${monthNames[d.month - 1]} ${d.year}` }));
 
   const width = container.clientWidth || 400;
   const height = 260;

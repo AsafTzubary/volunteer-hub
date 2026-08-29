@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const Group = require('../models/Group');
 const User = require('../models/User');
 const Post = require('../models/Post');
+const Event = require('../models/Event');
 const {
   validateGroupName,
   validateCategory,
@@ -193,6 +194,7 @@ async function deleteGroup(req, res) {
   await Promise.all([
     Group.deleteOne({ _id: id }),
     Post.deleteMany({ group: id }),
+    Event.deleteMany({ group: id }),
     User.updateMany({ joinedGroups: id }, { $pull: { joinedGroups: id } }),
   ]);
 

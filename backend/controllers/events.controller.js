@@ -11,20 +11,37 @@ const {
   validateLongitude,
   validateEventDate,
   validateMaxParticipants,
+  validateRsvpStatus,
 } = require('../utils/validators');
+
+function countByStatus(rsvps, status) {
+  return rsvps.filter((rsvp) => rsvp.status === status).length;
+}
+
+function rsvpSummary(event, viewerId) {
+  const rsvps = event.rsvps || [];
+  const myRsvp = viewerId && rsvps.find((rsvp) => rsvp.user.equals(viewerId));
+  return {
+    participantsCount: countByStatus(rsvps, 'going'),
+    interestedCount: countByStatus(rsvps, 'interested'),
+    notGoingCount: countByStatus(rsvps, 'not_going'),
+    myStatus: myRsvp ? myRsvp.status : null,
+    isParticipant: Boolean(myRsvp && myRsvp.status === 'going'),
+  };
+}
 
 async function listGroupEvents(req, res) {
   const { groupId } = req.query;
-
   if (!groupId || !mongoose.isValidObjectId(groupId)) {
     return res.status(400).json({ error: 'Valid groupId is required.' });
   }
-
-  const events = await Event.find({ group: groupId, date: { $gte: new Date() } })
-    .populate('manager', 'username fullName')
-    .sort({ date: 1 })
-    .lean();
-
+  const [events, user] = await Promise.all([
+    Event.find({ group: groupId, date: { $gte: new Date() } })
+      .populate('manager', 'username fullName')
+      .sort({ date: 1 })
+      .lean(),
+    User.findOne({ username: req.session.username }).select('_id').lean(),
+  ]);
   res.json(
     events.map((event) => ({
       id: event._id,
@@ -34,10 +51,10 @@ async function listGroupEvents(req, res) {
       address: event.address,
       date: event.date,
       maxParticipants: event.maxParticipants,
-      participantsCount: event.participants.length,
       status: event.status,
       manager: event.manager,
       createdAt: event.createdAt,
+      ...rsvpSummary(event, user._id),
     }))
   );
 }
@@ -54,50 +71,37 @@ async function createEvent(req, res) {
     date,
     maxParticipants,
   } = req.body;
-
   if (!groupId || !mongoose.isValidObjectId(groupId)) {
     return res.status(400).json({ error: 'Valid groupId is required.' });
   }
-
   const titleError = validateEventTitle(title);
   if (titleError) return res.status(400).json({ error: titleError });
-
   const categoryError = validateCategory(category);
   if (categoryError) return res.status(400).json({ error: categoryError });
-
   const descriptionError = validateEventDescription(description);
   if (descriptionError) return res.status(400).json({ error: descriptionError });
-
   const addressError = validateAddress(address);
   if (addressError) return res.status(400).json({ error: addressError });
-
   if (latitude !== undefined) {
     const latitudeError = validateLatitude(latitude);
     if (latitudeError) return res.status(400).json({ error: latitudeError });
   }
-
   if (longitude !== undefined) {
     const longitudeError = validateLongitude(longitude);
     if (longitudeError) return res.status(400).json({ error: longitudeError });
   }
-
   const dateError = validateEventDate(date);
   if (dateError) return res.status(400).json({ error: dateError });
-
   const maxParticipantsError = validateMaxParticipants(maxParticipants);
   if (maxParticipantsError) return res.status(400).json({ error: maxParticipantsError });
-
   const [group, user] = await Promise.all([
     Group.findById(groupId).select('manager').lean(),
     User.findOne({ username: req.session.username }).select('_id').lean(),
   ]);
-
   if (!group) return res.status(404).json({ error: 'Group not found.' });
-
   if (!group.manager.equals(user._id)) {
     return res.status(403).json({ error: 'Only the group manager can create events for this group.' });
   }
-
   const event = await Event.create({
     title: title.trim(),
     category: category.trim(),
@@ -110,7 +114,6 @@ async function createEvent(req, res) {
     group: groupId,
     manager: user._id,
   });
-
   res.status(201).json({
     id: event._id,
     title: event.title,
@@ -124,7 +127,7 @@ async function createEvent(req, res) {
     status: event.status,
     group: event.group,
     manager: event.manager,
-    participants: event.participants,
+    rsvps: event.rsvps,
     createdAt: event.createdAt,
   });
 }
@@ -133,9 +136,7 @@ async function listUpcomingEvents(req, res) {
   const user = await User.findOne({ username: req.session.username })
     .select('joinedGroups _id')
     .lean();
-
   if (!user) return res.status(401).json({ error: 'Not authenticated.' });
-
   const events = await Event.find({
     group: { $in: user.joinedGroups },
     date: { $gte: new Date() },
@@ -145,9 +146,6 @@ async function listUpcomingEvents(req, res) {
     .populate('group', 'name')
     .sort({ date: 1 })
     .lean();
-
-  const userId = user._id.toString();
-
   res.json(
     events.map((event) => ({
       id: event._id,
@@ -157,11 +155,10 @@ async function listUpcomingEvents(req, res) {
       address: event.address,
       date: event.date,
       maxParticipants: event.maxParticipants,
-      participantsCount: event.participants.length,
       status: event.status,
       manager: event.manager,
       group: { id: event.group._id, name: event.group.name },
-      isParticipant: event.participants.some((p) => p.toString() === userId),
+      ...rsvpSummary(event, user._id),
     }))
   );
 }
@@ -175,7 +172,6 @@ async function listAllUpcomingEvents(req, res) {
     .populate('group', 'name')
     .sort({ date: 1 })
     .lean();
-
   res.json(
     events.map((event) => ({
       id: event._id,
@@ -185,7 +181,7 @@ async function listAllUpcomingEvents(req, res) {
       address: event.address,
       date: event.date,
       maxParticipants: event.maxParticipants,
-      participantsCount: event.participants.length,
+      participantsCount: countByStatus(event.rsvps || [], 'going'),
       status: event.status,
       manager: event.manager,
       group: { id: event.group._id, name: event.group.name },
@@ -193,7 +189,7 @@ async function listAllUpcomingEvents(req, res) {
   );
 }
 
-async function getEventDetails(req, res){
+async function getEventDetails(req, res) {
   const { id } = req.params;
   if (!mongoose.isValidObjectId(id)) return res.status(404).json({ error: 'Event not found.' });
 
@@ -204,30 +200,62 @@ async function getEventDetails(req, res){
       .populate('group', 'name')
       .populate('manager', 'username fullName')
       .lean(),
-      User.findOne({ username: viewerUsername }).select('_id').lean()
+    User.findOne({ username: viewerUsername }).select('_id').lean(),
   ]);
-  
+
   if (!event) return res.status(404).json({ error: 'Event not found.' });
+
   const isManager = event.manager?.username === viewerUsername;
-  const isParticipant = event.participants.some((p) => p.equals(viewer._id));
+  const summary = rsvpSummary(event, viewer?._id);
 
   res.json({
-      id: event._id,
-      title: event.title,
-      description: event.description,
-      category: event.category,
-      address: event.address,
-      date: event.date,
-      maxParticipants: event.maxParticipants,
-      participantsCount: event.participants.length,
-      availablePlaces: event.maxParticipants - event.participants.length,
-      status: event.status,
-      group: event.group,
-      manager: event.manager,
-      isManager,
-      isParticipant,
-    });
-
+    id: event._id,
+    title: event.title,
+    description: event.description,
+    category: event.category,
+    address: event.address,
+    date: event.date,
+    maxParticipants: event.maxParticipants,
+    availablePlaces: event.maxParticipants - summary.participantsCount,
+    status: event.status,
+    group: event.group,
+    manager: event.manager,
+    isManager,
+    ...summary,
+  });
 }
 
-module.exports = { listGroupEvents, createEvent, listUpcomingEvents, listAllUpcomingEvents, getEventDetails };
+async function setRsvp(req, res) {
+  const { id } = req.params;
+  const { status } = req.body;
+  if (!mongoose.isValidObjectId(id)) {
+    return res.status(404).json({ error: 'Event not found.' });
+  }
+  if (status) {
+    const statusError = validateRsvpStatus(status);
+    if (statusError) return res.status(400).json({ error: statusError });
+  }
+  const event = await Event.findById(id).select('group maxParticipants rsvps').lean();
+  if (!event) return res.status(404).json({ error: 'Event not found.' });
+  const [group, user] = await Promise.all([
+    Group.findById(event.group).select('manager members').lean(),
+    User.findOne({ username: req.session.username }).select('_id').lean(),
+  ]);
+  const isMember =
+    group.manager.equals(user._id) || group.members.some((member) => member.equals(user._id));
+  if (!isMember) {
+    return res.status(403).json({ error: 'Only group members can respond to this event.' });
+  }
+  const myRsvp = event.rsvps.find((rsvp) => rsvp.user.equals(user._id));
+  const isAlreadyGoing = myRsvp && myRsvp.status === 'going';
+  if (status === 'going' && !isAlreadyGoing) {
+    if (countByStatus(event.rsvps, 'going') >= event.maxParticipants) {
+      return res.status(409).json({ error: 'This event is already full.' });
+    }
+  }
+  await Event.updateOne({ _id: id }, { $pull: { rsvps: { user: user._id } } });
+  if (status) {
+    await Event.updateOne({ _id: id }, { $push: { rsvps: { user: user._id, status } } });
+  }
+  const updated = await Event.findById(id).select('rsvps maxParticipants').lean();
+  res.json({ id, maxParticipants: updated.maxParticipants,

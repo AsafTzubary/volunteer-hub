@@ -12,6 +12,7 @@ async function init() {
   document.getElementById('my-profile-link').href = profileUrl(username);
   wireLogout();
 
+  loadCounts();
   loadMembersByCategory();
 
   const now = new Date();
@@ -34,6 +35,23 @@ async function init() {
     document.getElementById('filter-to').value = '';
     loadRegistrationsByMonth();
   });
+}
+
+async function loadCounts() {
+  const [groupsRes, eventsRes] = await Promise.all([
+    fetch('/api/groups'),
+    fetch('/api/events/all'),
+  ]);
+
+  if (groupsRes.ok) {
+    const data = await groupsRes.json();
+    document.getElementById('kpi-groups').textContent = data.totalCount;
+  }
+
+  if (eventsRes.ok) {
+    const data = await eventsRes.json();
+    document.getElementById('kpi-events').textContent = data.length;
+  }
 }
 
 async function loadMembersByCategory() {

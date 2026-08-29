@@ -13,6 +13,7 @@ const {
   validateMaxParticipants,
   validateRsvpStatus,
 } = require('../utils/validators');
+const { announceNewEvent } = require('../utils/event-announcer');
 
 function countByStatus(rsvps, status) {
   return rsvps.filter((rsvp) => rsvp.status === status).length;
@@ -108,7 +109,7 @@ async function createEvent(req, res) {
   if (maxParticipantsError) return res.status(400).json({ error: maxParticipantsError });
 
   const [group, user] = await Promise.all([
-    Group.findById(groupId).select('manager').lean(),
+    Group.findById(groupId).select('manager name').lean(),
     User.findOne({ username: req.session.username }).select('_id').lean(),
   ]);
 
@@ -130,6 +131,9 @@ async function createEvent(req, res) {
     group: groupId,
     manager: user._id,
   });
+
+  // Fire and forget: announcing the event must not delay or fail this response.
+  announceNewEvent(event, group.name);
 
   res.status(201).json({
     id: event._id,

@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Volunteer Hub - Edit Event</title>
+  <link
+    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+    rel="stylesheet"
+  />
+  <link rel="stylesheet" href="../css/styles.css" />
+</head>
+<body class="bg-light">
+
+  <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+    <div class="container">
+      <a class="navbar-brand" href="/dashboard.html">Volunteer Hub</a>
+      <div class="d-flex gap-2 align-items-center">
+        <a id="my-profile-link" href="#" class="btn btn-outline-light btn-sm">My Profile</a>
+        <button id="logout-btn" class="btn btn-outline-light btn-sm">Log Out</button>
+      </div>
+    </div>
+  </nav>
+
+  <main class="container py-4">
+    <div class="row justify-content-center">
+      <div class="col-lg-6">
+
+        <div class="card shadow-sm p-4">
+          <h1 class="h5 mb-4">Edit Event</h1>
+
+          <form id="edit-event-form" novalidate>
+
+            <div class="mb-3">
+              <label for="title" class="form-label">Event Title</label>
+              <input type="text" class="form-control" id="title" name="title" maxlength="100" required />
+              <div class="invalid-feedback" id="title-error"></div>
+            </div>
+
+            <div class="mb-3">
+              <label for="category" class="form-label">Category</label>
+              <input type="text" class="form-control" id="category" name="category" maxlength="40" required />
+              <div class="invalid-feedback" id="category-error"></div>
+            </div>
+
+            <div class="mb-3">
+              <label for="description" class="form-label">Description</label>
+              <textarea class="form-control" id="description" name="description" rows="3" maxlength="1000"></textarea>
+              <div class="invalid-feedback" id="description-error"></div>
+            </div>
+
+            <div class="mb-3">
+              <label for="date" class="form-label">Date &amp; Time</label>
+              <input type="datetime-local" class="form-control" id="date" name="date" required />
+              <div class="invalid-feedback" id="date-error"></div>
+            </div>
+
+            <div class="mb-3">
+              <label for="address" class="form-label">Address</label>
+              <input type="text" class="form-control" id="address" name="address" />
+              <div class="invalid-feedback" id="address-error"></div>
+            </div>
+
+            <div class="mb-3">
+              <label for="maxParticipants" class="form-label">Max Participants</label>
+              <input type="number" class="form-control" id="maxParticipants" name="maxParticipants" min="1" max="500" required />
+              <div class="invalid-feedback" id="maxParticipants-error"></div>
+            </div>
+
+            <div id="form-error" class="alert alert-danger d-none" role="alert"></div>
+
+            <div class="d-flex gap-2">
+              <button type="submit" class="btn btn-primary">Save Changes</button>
+              <a id="cancel-link" href="#" class="btn btn-outline-secondary">Cancel</a>
+            </div>
+
+          </form>
+        </div>
+
+      </div>
+    </div>
+  </main>
+
+  <footer class="text-center text-muted py-3 mt-4 border-top small">
+    &copy; 2025 Volunteer Hub
+  </footer>
+
+  <script src="../js/util.js"></script>
+  <script src="js/edit.js"></script>
+</body>
+</html>

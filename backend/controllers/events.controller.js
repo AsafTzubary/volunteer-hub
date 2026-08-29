@@ -115,8 +115,9 @@ async function createEvent(req, res) {
     group: groupId,
     manager: user._id,
   });
-  
+
   announceNewEvent(event, group.name);
+
   res.status(201).json({
     id: event._id,
     title: event.title,
@@ -195,9 +196,7 @@ async function listAllUpcomingEvents(req, res) {
 async function getEventDetails(req, res) {
   const { id } = req.params;
   if (!mongoose.isValidObjectId(id)) return res.status(404).json({ error: 'Event not found.' });
-
   const viewerUsername = req.session.username;
-
   const [event, viewer] = await Promise.all([
     Event.findById(id)
       .populate('group', 'name')
@@ -205,12 +204,9 @@ async function getEventDetails(req, res) {
       .lean(),
     User.findOne({ username: viewerUsername }).select('_id').lean(),
   ]);
-
   if (!event) return res.status(404).json({ error: 'Event not found.' });
-
   const isManager = event.manager?.username === viewerUsername;
   const summary = rsvpSummary(event, viewer?._id);
-
   res.json({
     id: event._id,
     title: event.title,
@@ -261,32 +257,52 @@ async function setRsvp(req, res) {
     await Event.updateOne({ _id: id }, { $push: { rsvps: { user: user._id, status } } });
   }
   const updated = await Event.findById(id).select('rsvps maxParticipants').lean();
-
   res.json({ id, maxParticipants: updated.maxParticipants, ...rsvpSummary(updated, user._id) });
 }
 
 async function deleteEvent(req, res) {
   const { id } = req.params;
-
   if (!mongoose.isValidObjectId(id)) {
     return res.status(404).json({ error: 'Event not found.' });
   }
-
   const event = await Event.findById(id).select('manager group').lean();
   if (!event) return res.status(404).json({ error: 'Event not found.' });
-
   const [group, user] = await Promise.all([
     Group.findById(event.group).select('manager').lean(),
     User.findOne({ username: req.session.username }).select('_id').lean(),
   ]);
-
   if (!event.manager.equals(user._id) && !group.manager.equals(user._id)) {
     return res.status(403).json({ error: 'Only the group manager can delete this event.' });
   }
-
   await Event.deleteOne({ _id: id });
-
   res.json({ message: 'Event deleted successfully.' });
+}
+
+async function getEventParticipants(req, res) {
+  const { id } = req.params;
+  if (!mongoose.isValidObjectId(id)) {
+    return res.status(404).json({ error: 'Event not found.' });
+  }
+  const event = await Event.findById(id)
+    .select('manager group rsvps')
+    .populate('rsvps.user', 'username fullName city')
+    .lean();
+  if (!event) return res.status(404).json({ error: 'Event not found.' });
+  const [group, user] = await Promise.all([
+    Group.findById(event.group).select('manager').lean(),
+    User.findOne({ username: req.session.username }).select('_id').lean(),
+  ]);
+  if (!event.manager.equals(user._id) && !group.manager.equals(user._id)) {
+    return res.status(403).json({ error: 'Only the group manager can view participants.' });
+  }
+  const participants = (event.rsvps || [])
+    .filter((rsvp) => rsvp.status === 'going')
+    .map((rsvp) => ({
+      username: rsvp.user.username,
+      fullName: rsvp.user.fullName,
+      city: rsvp.user.city,
+    }));
+  res.json({ participants });
 }
 
 async function updateEvent(req, res) {
@@ -294,22 +310,17 @@ async function updateEvent(req, res) {
   if (!mongoose.isValidObjectId(id)) {
     return res.status(404).json({ error: 'Event not found.' });
   }
-
   const event = await Event.findById(id).select('manager group rsvps').lean();
   if (!event) return res.status(404).json({ error: 'Event not found.' });
-
   const [group, user] = await Promise.all([
     Group.findById(event.group).select('manager').lean(),
     User.findOne({ username: req.session.username }).select('_id').lean(),
   ]);
-
   if (!event.manager.equals(user._id) && !group.manager.equals(user._id)) {
     return res.status(403).json({ error: 'Only the group manager can edit this event.' });
   }
-
   const { title, category, description, address, latitude, longitude, date, maxParticipants } = req.body;
   const errors = {};
-
   if (title !== undefined) {
     const titleError = validateEventTitle(title);
     if (titleError) errors.title = titleError;
@@ -342,11 +353,9 @@ async function updateEvent(req, res) {
     const maxParticipantsError = validateMaxParticipants(maxParticipants);
     if (maxParticipantsError) errors.maxParticipants = maxParticipantsError;
   }
-
   if (Object.keys(errors).length > 0) {
     return res.status(400).json({ errors });
   }
-
   if (maxParticipants !== undefined) {
     const goingCount = countByStatus(event.rsvps || [], 'going');
     if (Number(maxParticipants) < goingCount) {
@@ -355,7 +364,6 @@ async function updateEvent(req, res) {
       });
     }
   }
-
   const updates = {};
   if (title !== undefined) updates.title = title.trim();
   if (category !== undefined) updates.category = category.trim();
@@ -365,9 +373,7 @@ async function updateEvent(req, res) {
   if (longitude !== undefined) updates.longitude = Number(longitude);
   if (date !== undefined) updates.date = new Date(date);
   if (maxParticipants !== undefined) updates.maxParticipants = Number(maxParticipants);
-
   const updatedEvent = await Event.findByIdAndUpdate(id, { $set: updates }, { new: true, lean: true });
-
   res.json({
     id: updatedEvent._id,
     title: updatedEvent.title,
@@ -389,5 +395,6 @@ module.exports = {
   getEventDetails,
   setRsvp,
   deleteEvent,
+  getEventParticipants,
   updateEvent,
 };

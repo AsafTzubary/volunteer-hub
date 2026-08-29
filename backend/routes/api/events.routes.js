@@ -5,6 +5,7 @@ const {
   createEvent,
   listUpcomingEvents,
   listAllUpcomingEvents,
+  getEventDetails,
   setRsvp,
   deleteEvent,
   updateEvent,
@@ -16,6 +17,7 @@ router.get('/upcoming', requireAuth, listUpcomingEvents);
 router.get('/all', requireAuth, listAllUpcomingEvents);
 router.get('/', requireAuth, listGroupEvents);
 router.post('/', requireAuth, createEvent);
+router.get('/:id', requireAuth, getEventDetails);
 router.post('/:id/rsvp', requireAuth, setRsvp);
 router.delete('/:id', requireAuth, deleteEvent);
 router.put('/:id', requireAuth, updateEvent);

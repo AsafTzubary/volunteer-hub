@@ -8,4 +8,9 @@ async function membersByCategory(req, res) {
   res.json(data.map(d => ({ category: d._id, memberCount: d.memberCount })));
 }
 
-module.exports = { membersByCategory };
+async function getCategories(req, res) {
+  const categories = await Group.distinct('category');
+  res.json(categories.sort());
+}
+
+module.exports = { membersByCategory, getCategories };

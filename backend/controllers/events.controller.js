@@ -284,6 +284,38 @@ async function deleteEvent(req, res) {
   res.json({ message: 'Event deleted successfully.' });
 }
 
+async function getEventParticipants(req, res) {
+  const { id } = req.params;
+  if (!mongoose.isValidObjectId(id)) {
+    return res.status(404).json({ error: 'Event not found.' });
+  }
+
+  const event = await Event.findById(id)
+    .select('manager group rsvps')
+    .populate('rsvps.user', 'username fullName city')
+    .lean();
+  if (!event) return res.status(404).json({ error: 'Event not found.' });
+
+  const [group, user] = await Promise.all([
+    Group.findById(event.group).select('manager').lean(),
+    User.findOne({ username: req.session.username }).select('_id').lean(),
+  ]);
+
+  if (!event.manager.equals(user._id) && !group.manager.equals(user._id)) {
+    return res.status(403).json({ error: 'Only the group manager can view participants.' });
+  }
+
+  const participants = (event.rsvps || [])
+    .filter((rsvp) => rsvp.status === 'going')
+    .map((rsvp) => ({
+      username: rsvp.user.username,
+      fullName: rsvp.user.fullName,
+      city: rsvp.user.city,
+    }));
+
+  res.json({ participants });
+}
+
 module.exports = {
   listGroupEvents,
   createEvent,
@@ -291,4 +323,5 @@ module.exports = {
   listAllUpcomingEvents,
   setRsvp,
   deleteEvent,
+  getEventParticipants,
 };

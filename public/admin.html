@@ -62,6 +62,18 @@
       <div class="col-12 col-lg-6">
         <div class="card shadow-sm p-4">
           <h2 class="h6 mb-3">Registrations by Month</h2>
+          <div class="d-flex gap-2 align-items-center mb-3 flex-wrap">
+            <div>
+              <label for="filter-from" class="form-label small mb-1">From</label>
+              <input type="month" id="filter-from" class="form-control form-control-sm" />
+            </div>
+            <div>
+              <label for="filter-to" class="form-label small mb-1">To</label>
+              <input type="month" id="filter-to" class="form-control form-control-sm" />
+            </div>
+            <button id="filter-apply" class="btn btn-primary btn-sm mt-3">Apply</button>
+            <button id="filter-reset" class="btn btn-outline-secondary btn-sm mt-3">Reset</button>
+          </div>
           <div id="chart-registrations-by-month"></div>
         </div>
       </div>

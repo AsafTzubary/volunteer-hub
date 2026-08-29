@@ -14,6 +14,18 @@ async function init() {
 
   loadMembersByCategory();
   loadRegistrationsByMonth();
+
+  document.getElementById('filter-apply').addEventListener('click', () => {
+    const from = document.getElementById('filter-from').value;
+    const to = document.getElementById('filter-to').value;
+    loadRegistrationsByMonth(from || undefined, to || undefined);
+  });
+
+  document.getElementById('filter-reset').addEventListener('click', () => {
+    document.getElementById('filter-from').value = '';
+    document.getElementById('filter-to').value = '';
+    loadRegistrationsByMonth();
+  });
 }
 
 async function loadMembersByCategory() {

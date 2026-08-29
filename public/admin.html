@@ -24,12 +24,56 @@
 
   <main class="container py-4">
     <h1 class="h4 mb-4">Admin Panel</h1>
+
+    <div class="row g-3 mb-5">
+      <div class="col-6 col-md-3">
+        <div class="card shadow-sm text-center p-3">
+          <div id="kpi-users" class="fs-2 fw-bold text-primary">—</div>
+          <div class="text-muted small">Users</div>
+        </div>
+      </div>
+      <div class="col-6 col-md-3">
+        <div class="card shadow-sm text-center p-3">
+          <div id="kpi-groups" class="fs-2 fw-bold text-success">—</div>
+          <div class="text-muted small">Groups</div>
+        </div>
+      </div>
+      <div class="col-6 col-md-3">
+        <div class="card shadow-sm text-center p-3">
+          <div id="kpi-events" class="fs-2 fw-bold text-warning">—</div>
+          <div class="text-muted small">Events</div>
+        </div>
+      </div>
+      <div class="col-6 col-md-3">
+        <div class="card shadow-sm text-center p-3">
+          <div id="kpi-rsvps" class="fs-2 fw-bold text-danger">—</div>
+          <div class="text-muted small">RSVPs (going)</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="row g-4">
+      <div class="col-12 col-lg-6">
+        <div class="card shadow-sm p-4">
+          <h2 class="h6 mb-3">Members by Category</h2>
+          <div id="chart-members-by-category"></div>
+        </div>
+      </div>
+      <div class="col-12 col-lg-6">
+        <div class="card shadow-sm p-4">
+          <h2 class="h6 mb-3">Registrations by Month</h2>
+          <div id="chart-registrations-by-month"></div>
+        </div>
+      </div>
+    </div>
+
   </main>
 
   <footer class="text-center text-muted py-3 mt-4 border-top small">
     &copy; 2025 Volunteer Hub
   </footer>
 
+  <script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
   <script src="js/util.js"></script>
   <script src="js/admin.js"></script>
 </body>

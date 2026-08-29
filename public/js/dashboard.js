@@ -117,13 +117,19 @@ async function pollNewPosts() {
 }
 
 async function init() {
-  const sessionUsername = await loadSession();
-  if (!sessionUsername) return;
+  const session = await loadSession();
+  if (!session) return;
+
+  const { username: sessionUsername, role } = session;
 
   const profileUrl_ = profileUrl(sessionUsername);
   document.getElementById('my-profile-link').href = profileUrl_;
   document.getElementById('profile-link').href = profileUrl_;
   wireLogout();
+
+  if (role === 'admin') {
+    document.getElementById('admin-panel-btn').classList.remove('d-none');
+  }
 
   const res = await fetch('/api/users/' + encodeURIComponent(sessionUsername));
   if (!res.ok) return;

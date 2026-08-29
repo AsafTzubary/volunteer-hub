@@ -8,6 +8,7 @@ const {
   getEventDetails,
   setRsvp,
   deleteEvent,
+  updateEvent,
 } = require('../../controllers/events.controller');
 
 const router = express.Router();
@@ -19,5 +20,6 @@ router.post('/', requireAuth, createEvent);
 router.get('/:id', requireAuth, getEventDetails);
 router.post('/:id/rsvp', requireAuth, setRsvp);
 router.delete('/:id', requireAuth, deleteEvent);
+router.put('/:id', requireAuth, updateEvent);
 
 module.exports = router;

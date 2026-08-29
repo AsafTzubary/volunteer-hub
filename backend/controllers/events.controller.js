@@ -261,4 +261,133 @@ async function setRsvp(req, res) {
     await Event.updateOne({ _id: id }, { $push: { rsvps: { user: user._id, status } } });
   }
   const updated = await Event.findById(id).select('rsvps maxParticipants').lean();
-  res.json({ id, maxParticipants: updated.maxParticipants,
+
+  res.json({ id, maxParticipants: updated.maxParticipants, ...rsvpSummary(updated, user._id) });
+}
+
+async function deleteEvent(req, res) {
+  const { id } = req.params;
+
+  if (!mongoose.isValidObjectId(id)) {
+    return res.status(404).json({ error: 'Event not found.' });
+  }
+
+  const event = await Event.findById(id).select('manager group').lean();
+  if (!event) return res.status(404).json({ error: 'Event not found.' });
+
+  const [group, user] = await Promise.all([
+    Group.findById(event.group).select('manager').lean(),
+    User.findOne({ username: req.session.username }).select('_id').lean(),
+  ]);
+
+  if (!event.manager.equals(user._id) && !group.manager.equals(user._id)) {
+    return res.status(403).json({ error: 'Only the group manager can delete this event.' });
+  }
+
+  await Event.deleteOne({ _id: id });
+
+  res.json({ message: 'Event deleted successfully.' });
+}
+
+async function updateEvent(req, res) {
+  const { id } = req.params;
+  if (!mongoose.isValidObjectId(id)) {
+    return res.status(404).json({ error: 'Event not found.' });
+  }
+
+  const event = await Event.findById(id).select('manager group rsvps').lean();
+  if (!event) return res.status(404).json({ error: 'Event not found.' });
+
+  const [group, user] = await Promise.all([
+    Group.findById(event.group).select('manager').lean(),
+    User.findOne({ username: req.session.username }).select('_id').lean(),
+  ]);
+
+  if (!event.manager.equals(user._id) && !group.manager.equals(user._id)) {
+    return res.status(403).json({ error: 'Only the group manager can edit this event.' });
+  }
+
+  const { title, category, description, address, latitude, longitude, date, maxParticipants } = req.body;
+  const errors = {};
+
+  if (title !== undefined) {
+    const titleError = validateEventTitle(title);
+    if (titleError) errors.title = titleError;
+  }
+  if (category !== undefined) {
+    const categoryError = validateCategory(category);
+    if (categoryError) errors.category = categoryError;
+  }
+  if (description !== undefined) {
+    const descriptionError = validateEventDescription(description);
+    if (descriptionError) errors.description = descriptionError;
+  }
+  if (address !== undefined) {
+    const addressError = validateAddress(address);
+    if (addressError) errors.address = addressError;
+  }
+  if (latitude !== undefined) {
+    const latitudeError = validateLatitude(latitude);
+    if (latitudeError) errors.latitude = latitudeError;
+  }
+  if (longitude !== undefined) {
+    const longitudeError = validateLongitude(longitude);
+    if (longitudeError) errors.longitude = longitudeError;
+  }
+  if (date !== undefined) {
+    const dateError = validateEventDate(date);
+    if (dateError) errors.date = dateError;
+  }
+  if (maxParticipants !== undefined) {
+    const maxParticipantsError = validateMaxParticipants(maxParticipants);
+    if (maxParticipantsError) errors.maxParticipants = maxParticipantsError;
+  }
+
+  if (Object.keys(errors).length > 0) {
+    return res.status(400).json({ errors });
+  }
+
+  if (maxParticipants !== undefined) {
+    const goingCount = countByStatus(event.rsvps || [], 'going');
+    if (Number(maxParticipants) < goingCount) {
+      return res.status(409).json({
+        error: `Cannot set capacity below the ${goingCount} participant(s) already registered.`,
+      });
+    }
+  }
+
+  const updates = {};
+  if (title !== undefined) updates.title = title.trim();
+  if (category !== undefined) updates.category = category.trim();
+  if (description !== undefined) updates.description = description.trim();
+  if (address !== undefined) updates.address = address.trim();
+  if (latitude !== undefined) updates.latitude = Number(latitude);
+  if (longitude !== undefined) updates.longitude = Number(longitude);
+  if (date !== undefined) updates.date = new Date(date);
+  if (maxParticipants !== undefined) updates.maxParticipants = Number(maxParticipants);
+
+  const updatedEvent = await Event.findByIdAndUpdate(id, { $set: updates }, { new: true, lean: true });
+
+  res.json({
+    id: updatedEvent._id,
+    title: updatedEvent.title,
+    category: updatedEvent.category,
+    description: updatedEvent.description,
+    address: updatedEvent.address,
+    latitude: updatedEvent.latitude,
+    longitude: updatedEvent.longitude,
+    date: updatedEvent.date,
+    maxParticipants: updatedEvent.maxParticipants,
+  });
+}
+
+module.exports = {
+  listGroupEvents,
+  createEvent,
+  listUpcomingEvents,
+  listAllUpcomingEvents,
+  getEventDetails,
+  setRsvp,
+  deleteEvent,
+  updateEvent,
+};

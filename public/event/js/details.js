@@ -24,6 +24,9 @@ function renderEvent(event) {
 
   if (event.isManager) {
     document.getElementById('manager-badge').classList.remove('d-none');
+    const editBtn = document.getElementById('edit-event-btn');
+    editBtn.href = '/event/edit.html?id=' + encodeURIComponent(event.id);
+    editBtn.classList.remove('d-none');
   }
   if (event.isParticipant) {
     document.getElementById('participant-badge').classList.remove('d-none');

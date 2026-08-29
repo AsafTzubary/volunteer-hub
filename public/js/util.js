@@ -4,7 +4,7 @@ async function loadSession() {
     window.location.href = '/login.html';
     return null;
   }
-  return (await res.json()).username;
+  return await res.json();
 }
 
 function wireLogout() {

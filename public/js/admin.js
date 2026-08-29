@@ -13,6 +13,7 @@ async function init() {
   wireLogout();
 
   loadMembersByCategory();
+  loadRegistrationsByMonth();
 }
 
 async function loadMembersByCategory() {
@@ -133,6 +134,111 @@ async function loadMembersByCategory() {
 
   renderButtons();
   drawChart(allData);
+}
+
+async function loadRegistrationsByMonth(from, to) {
+  const container = document.getElementById('chart-registrations-by-month');
+  d3.select(container).select('svg').remove();
+  d3.select(container).select('.no-data-msg').remove();
+
+  let url = '/api/stats/registrations-by-month';
+  const params = new URLSearchParams();
+  if (from) params.set('from', from);
+  if (to) params.set('to', to);
+  if (params.toString()) url += '?' + params.toString();
+
+  const res = await fetch(url);
+  if (!res.ok) return;
+  const data = await res.json();
+
+  if (!data.length) {
+    d3.select(container).append('p')
+      .attr('class', 'text-muted small no-data-msg')
+      .text('No registration data for the selected period.');
+    return;
+  }
+
+  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const labeled = data.map(d => ({ ...d, label: `${monthNames[d.month - 1]} ${d.year}` }));
+
+  const width = container.clientWidth || 400;
+  const height = 260;
+  const margin = { top: 20, right: 20, bottom: 60, left: 40 };
+  const innerW = width - margin.left - margin.right;
+  const innerH = height - margin.top - margin.bottom;
+
+  const svg = d3.select(container)
+    .append('svg')
+    .attr('width', width)
+    .attr('height', height);
+
+  const g = svg.append('g')
+    .attr('transform', `translate(${margin.left},${margin.top})`);
+
+  const x = d3.scalePoint()
+    .domain(labeled.map(d => d.label))
+    .range([0, innerW])
+    .padding(0.5);
+
+  const y = d3.scaleLinear()
+    .domain([0, d3.max(labeled, d => d.count)])
+    .nice()
+    .range([innerH, 0]);
+
+  g.append('g')
+    .attr('transform', `translate(0,${innerH})`)
+    .call(d3.axisBottom(x))
+    .selectAll('text')
+    .attr('transform', 'rotate(-35)')
+    .style('text-anchor', 'end')
+    .style('font-size', '11px');
+
+  g.append('g')
+    .call(d3.axisLeft(y).ticks(5));
+
+  g.append('path')
+    .datum(labeled)
+    .attr('fill', 'none')
+    .attr('stroke', '#0d6efd')
+    .attr('stroke-width', 2)
+    .attr('d', d3.line()
+      .x(d => x(d.label))
+      .y(d => y(d.count))
+    );
+
+  const tooltip = d3.select(container)
+    .append('div')
+    .style('position', 'absolute')
+    .style('background', '#333')
+    .style('color', '#fff')
+    .style('padding', '4px 8px')
+    .style('border-radius', '4px')
+    .style('font-size', '12px')
+    .style('pointer-events', 'none')
+    .style('opacity', 0);
+
+  d3.select(container).style('position', 'relative');
+
+  g.selectAll('circle')
+    .data(labeled)
+    .join('circle')
+    .attr('cx', d => x(d.label))
+    .attr('cy', d => y(d.count))
+    .attr('r', 5)
+    .attr('fill', '#0d6efd')
+    .attr('stroke', '#fff')
+    .attr('stroke-width', 2)
+    .on('mouseover', (event, d) => {
+      tooltip.style('opacity', 1)
+        .html(`<strong>${d.label}</strong><br>${d.count} registrations`);
+    })
+    .on('mousemove', (event) => {
+      const rect = container.getBoundingClientRect();
+      tooltip
+        .style('left', (event.clientX - rect.left + 10) + 'px')
+        .style('top', (event.clientY - rect.top - 28) + 'px');
+    })
+    .on('mouseout', () => tooltip.style('opacity', 0));
 }
 
 init();

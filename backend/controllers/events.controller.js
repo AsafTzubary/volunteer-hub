@@ -43,6 +43,30 @@ function computeEventStatus(event) {
   return 'upcoming';
 }
 
+// Event search parameters (task 73):
+//
+//   address      - case-insensitive partial match against the event's address.
+//   category     - exact match against the event's category.
+//   dateFrom     - only events on or after this date (ISO string).
+//   dateTo       - only events on or before this date (ISO string).
+//   status       - one of 'upcoming' | 'full' | 'completed' | 'cancelled',
+//                  matched against computeEventStatus(event) - the same
+//                  derived value returned to clients elsewhere, not the raw
+//                  stored field, so "full"/"completed" filter correctly.
+//   availableOnly - when truthy, only events with at least one open spot
+//                  (i.e. computeEventStatus(event) !== 'full' and not
+//                  cancelled/completed).
+//
+// Empty-field behavior: same convention as group search - any omitted or
+// blank param is left out of the query rather than excluding results.
+//
+// Sorting: results are sorted by date ascending (soonest first), matching
+// the existing listAllUpcomingEvents/listUpcomingEvents behavior.
+//
+// Note: like groups, the Event model has no "city" field - address is used
+// as the closest available stand-in for location-based search.
+
+
 async function listGroupEvents(req, res) {
   const { groupId } = req.query;
   if (!groupId || !mongoose.isValidObjectId(groupId)) {

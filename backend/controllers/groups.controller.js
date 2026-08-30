@@ -31,19 +31,70 @@ const GROUPS_PAGE_SIZE = 9;
 // Note: the Group model has no "city" field, so city is not a valid filter
 // despite being mentioned in an earlier draft of this task.
 
+function escapeRegex(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+// Builds the Mongo filter for listGroups from whichever search params were
+// actually provided. Anything omitted or blank is left out of the query
+// entirely (see the task 70 doc comment above) rather than excluding results.
+function buildGroupSearchFilter(query) {
+  const { name, category, minMembers, maxMembers, createdFrom, createdTo } = query;
+  const filter = {};
+
+  if (name && name.trim()) {
+    filter.name = { $regex: escapeRegex(name.trim()), $options: 'i' };
+  }
+
+  if (category && category.trim()) {
+    filter.category = category.trim();
+  }
+
+  if (createdFrom) {
+    const fromDate = new Date(createdFrom);
+    if (!isNaN(fromDate)) {
+      filter.createdAt = { ...filter.createdAt, $gte: fromDate };
+    }
+  }
+  if (createdTo) {
+    const toDate = new Date(createdTo);
+    if (!isNaN(toDate)) {
+      filter.createdAt = { ...filter.createdAt, $lte: toDate };
+    }
+  }
+
+  // members is an array field, so "member count" isn't a plain field match -
+  // $expr + $size lets us compare its length like a computed number.
+  const memberCountConditions = [];
+  if (minMembers !== undefined && minMembers !== '' && !isNaN(Number(minMembers))) {
+    memberCountConditions.push({ $gte: [{ $size: '$members' }, Number(minMembers)] });
+  }
+  if (maxMembers !== undefined && maxMembers !== '' && !isNaN(Number(maxMembers))) {
+    memberCountConditions.push({ $lte: [{ $size: '$members' }, Number(maxMembers)] });
+  }
+  if (memberCountConditions.length === 1) {
+    filter.$expr = memberCountConditions[0];
+  } else if (memberCountConditions.length > 1) {
+    filter.$expr = { $and: memberCountConditions };
+  }
+
+  return filter;
+}
+
 async function listGroups(req, res) {
   const page = Math.max(1, parseInt(req.query.page, 10) || 1);
   const skip = (page - 1) * GROUPS_PAGE_SIZE;
+  const filter = buildGroupSearchFilter(req.query);
 
   const [groups, totalCount] = await Promise.all([
-    Group.find({})
+    Group.find(filter)
       .select('name category manager members createdAt')
       .populate('manager', 'username fullName')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(GROUPS_PAGE_SIZE)
       .lean(),
-    Group.countDocuments({}),
+    Group.countDocuments(filter),
   ]);
 
   res.json({

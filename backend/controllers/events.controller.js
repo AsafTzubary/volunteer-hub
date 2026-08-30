@@ -66,6 +66,115 @@ function computeEventStatus(event) {
 // Note: like groups, the Event model has no "city" field - address is used
 // as the closest available stand-in for location-based search.
 
+function escapeRegex(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+// Counts "going" RSVPs as a query-time expression, rather than in JS, so it
+// can be compared against maxParticipants inside a Mongo $expr. This is a
+// step up from the group-search $size trick since rsvps is an array of
+// subdocuments - we have to $filter down to the "going" ones first before
+// measuring how many there are.
+function goingCountExpr() {
+  return {
+    $size: {
+      $filter: {
+        input: { $ifNull: ['$rsvps', []] },
+        as: 'r',
+        cond: { $eq: ['$$r.status', 'going'] },
+      },
+    },
+  };
+}
+
+// Builds the Mongo filter for searchEvents. Each applicable condition is
+// pushed independently into an $and array instead of merged into shared
+// field objects - that avoids having to manually reconcile a user-supplied
+// dateFrom/dateTo with the implicit "must be in the future" requirement that
+// the full/upcoming/availableOnly filters add on top.
+function buildEventSearchFilter(query) {
+  const { address, category, dateFrom, dateTo, status, availableOnly } = query;
+  const conditions = [];
+
+  if (address && address.trim()) {
+    conditions.push({ address: { $regex: escapeRegex(address.trim()), $options: 'i' } });
+  }
+
+  if (category && category.trim()) {
+    conditions.push({ category: category.trim() });
+  }
+
+  if (dateFrom) {
+    const from = new Date(dateFrom);
+    if (!isNaN(from)) conditions.push({ date: { $gte: from } });
+  }
+
+  if (dateTo) {
+    const to = new Date(dateTo);
+    if (!isNaN(to)) conditions.push({ date: { $lte: to } });
+  }
+
+  const now = new Date();
+  const hasRoomExpr = { $expr: { $lt: [goingCountExpr(), '$maxParticipants'] } };
+
+  if (status === 'cancelled') {
+    conditions.push({ status: 'cancelled' });
+  } else if (status === 'completed') {
+    conditions.push({ status: { $ne: 'cancelled' } }, { date: { $lt: now } });
+  } else if (status === 'full') {
+    conditions.push(
+      { status: { $ne: 'cancelled' } },
+      { date: { $gte: now } },
+      { $expr: { $gte: [goingCountExpr(), '$maxParticipants'] } }
+    );
+  } else if (status === 'upcoming') {
+    conditions.push({ status: { $ne: 'cancelled' } }, { date: { $gte: now } }, hasRoomExpr);
+  } else if (availableOnly) {
+    // Not already constrained by a status above - availableOnly on its own
+    // means the same thing as status=upcoming's "has room" condition.
+    conditions.push({ status: { $ne: 'cancelled' } }, { date: { $gte: now } }, hasRoomExpr);
+  }
+
+  return conditions.length > 0 ? { $and: conditions } : {};
+}
+
+const EVENT_SORT_OPTIONS = {
+  date_asc: { date: 1 },
+  date_desc: { date: -1 },
+  createdAt_desc: { createdAt: -1 },
+};
+
+function resolveEventSort(sortParam) {
+  return EVENT_SORT_OPTIONS[sortParam] || EVENT_SORT_OPTIONS.date_asc;
+}
+
+async function searchEvents(req, res) {
+  const filter = buildEventSearchFilter(req.query);
+  const sort = resolveEventSort(req.query.sort);
+
+  const events = await Event.find(filter)
+    .populate('manager', 'username fullName')
+    .populate('group', 'name')
+    .sort(sort)
+    .lean();
+
+  res.json(
+    events.map((event) => ({
+      id: event._id,
+      title: event.title,
+      category: event.category,
+      description: event.description,
+      address: event.address,
+      date: event.date,
+      maxParticipants: event.maxParticipants,
+      participantsCount: countByStatus(event.rsvps || [], 'going'),
+      status: computeEventStatus(event),
+      manager: event.manager,
+      group: { id: event.group._id, name: event.group.name },
+    }))
+  );
+}
+
 
 async function listGroupEvents(req, res) {
   const { groupId } = req.query;
@@ -438,4 +547,5 @@ module.exports = {
   deleteEvent,
   getEventParticipants,
   updateEvent,
+  searchEvents,
 };

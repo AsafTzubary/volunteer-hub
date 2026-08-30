@@ -10,12 +10,14 @@ const {
   deleteEvent,
   getEventParticipants,
   updateEvent,
+  searchEvents,
 } = require('../../controllers/events.controller');
 
 const router = express.Router();
 
 router.get('/upcoming', requireAuth, listUpcomingEvents);
 router.get('/all', requireAuth, listAllUpcomingEvents);
+router.get('/search', requireAuth, searchEvents);
 router.get('/', requireAuth, listGroupEvents);
 router.post('/', requireAuth, createEvent);
 router.get('/:id', requireAuth, getEventDetails);

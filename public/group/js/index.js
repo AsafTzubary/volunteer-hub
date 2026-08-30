@@ -256,7 +256,7 @@ function eventCard(event, canRsvp, canDelete) {
         <div class="btn-group">${canRsvp ? rsvpButtons(event) : ''}</div>
         <span class="rsvp-counts text-muted" style="font-size:0.72rem">${rsvpCountsText(event)}</span>
       </div>
-      ${canDelete ? `<button class="btn btn-sm btn-outline-danger delete-event-btn mt-2" data-id="${event.id}">Delete</button>` : ''}
+      ${canDelete ? `<button class="btn btn-sm btn-outline-danger delete-event-btn mt-2" data-id="${event.id}">Cancel Event</button>` : ''}
     </div>
   `;
 }
@@ -350,7 +350,7 @@ async function confirmDeleteEvent() {
   confirmBtn.disabled = false;
   bootstrap.Modal.getInstance(document.getElementById('delete-event-modal')).hide();
   if (!res.ok) {
-    alert(data.error || 'Failed to delete event.');
+    alert(data.error || 'Failed to cancel event.');
     return;
   }
   currentEvents = currentEvents.filter((event) => event.id !== pendingDeleteEventId);

@@ -37,7 +37,7 @@ async function listGroupEvents(req, res) {
     return res.status(400).json({ error: 'Valid groupId is required.' });
   }
   const [events, user] = await Promise.all([
-    Event.find({ group: groupId, date: { $gte: new Date() } })
+    Event.find({ group: groupId, date: { $gte: new Date() }, status: { $ne: 'cancelled' } })
       .populate('manager', 'username fullName')
       .sort({ date: 1 })
       .lean(),
@@ -265,17 +265,22 @@ async function deleteEvent(req, res) {
   if (!mongoose.isValidObjectId(id)) {
     return res.status(404).json({ error: 'Event not found.' });
   }
-  const event = await Event.findById(id).select('manager group').lean();
+  const event = await Event.findById(id).select('manager group status').lean();
   if (!event) return res.status(404).json({ error: 'Event not found.' });
   const [group, user] = await Promise.all([
     Group.findById(event.group).select('manager').lean(),
     User.findOne({ username: req.session.username }).select('_id').lean(),
   ]);
   if (!event.manager.equals(user._id) && !group.manager.equals(user._id)) {
-    return res.status(403).json({ error: 'Only the group manager can delete this event.' });
+    return res.status(403).json({ error: 'Only the group manager can cancel this event.' });
   }
-  await Event.deleteOne({ _id: id });
-  res.json({ message: 'Event deleted successfully.' });
+  if (event.status === 'cancelled') {
+    return res.status(409).json({ error: 'This event is already cancelled.' });
+  }
+  // Cancelling marks the event rather than deleting it, so history and past
+  // RSVPs are preserved and the event can still be viewed by its manager/group.
+  await Event.updateOne({ _id: id }, { $set: { status: 'cancelled' } });
+  res.json({ message: 'Event cancelled successfully.' });
 }
 
 async function getEventParticipants(req, res) {

@@ -1,4 +1,10 @@
 const User = require('../models/User');
+const {
+  validateFullName,
+  validateEmail,
+  validateCity,
+  validateInterests,
+} = require('../utils/validators');
 
 async function getProfile(req, res) {
   const { username } = req.params;
@@ -37,28 +43,23 @@ async function updateProfile(req, res) {
   const errors = {};
 
   if (fullName !== undefined) {
-    if (typeof fullName !== 'string' || fullName.trim().length > 60) {
-      errors.fullName = 'Full name must be 60 characters or fewer.';
-    }
+    const fullNameError = validateFullName(fullName);
+    if (fullNameError) errors.fullName = fullNameError;
   }
 
   if (email !== undefined) {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (typeof email !== 'string' || (email.trim() !== '' && !emailRegex.test(email.trim()))) {
-      errors.email = 'Invalid email address.';
-    }
+    const emailError = validateEmail(email);
+    if (emailError) errors.email = emailError;
   }
 
   if (city !== undefined) {
-    if (typeof city !== 'string' || city.trim().length > 60) {
-      errors.city = 'City must be 60 characters or fewer.';
-    }
+    const cityError = validateCity(city);
+    if (cityError) errors.city = cityError;
   }
 
   if (interests !== undefined) {
-    if (!Array.isArray(interests) || interests.length > 10 || interests.some(i => typeof i !== 'string' || i.trim().length > 30)) {
-      errors.interests = 'Interests must be up to 10 tags, each 30 characters or fewer.';
-    }
+    const interestsError = validateInterests(interests);
+    if (interestsError) errors.interests = interestsError;
   }
 
   if (Object.keys(errors).length > 0) {

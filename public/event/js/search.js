@@ -72,7 +72,7 @@ function renderActiveFilters(filters) {
   container.querySelectorAll('[data-filter-key]').forEach((btn) => {
     btn.addEventListener('click', () => {
       clearFilterField(btn.dataset.filterKey);
-      loadResults(readFiltersFromForm());
+      loadResults(readFiltersFromForm(), 1);
     });
   });
 }
@@ -102,8 +102,11 @@ function eventCard(event) {
 // this, a slow older request (e.g. a broad unfiltered search) could resolve
 // after a faster newer one and overwrite it with stale results.
 let searchRequestId = 0;
+let currentFilters = {};
+let currentPage = 1;
 
-async function loadResults(filters) {
+async function loadResults(filters, page = 1) {
+  currentFilters = filters;
   renderActiveFilters(filters);
   const requestId = ++searchRequestId;
 
@@ -111,6 +114,7 @@ async function loadResults(filters) {
   Object.entries(filters).forEach(([key, value]) => {
     if (value) params.set(key, value);
   });
+  params.set('page', page);
 
   const res = await fetch('/api/events/search?' + params.toString());
 
@@ -125,25 +129,32 @@ async function loadResults(filters) {
     return;
   }
 
-  const events = await res.json();
+  const data = await res.json();
 
   if (requestId !== searchRequestId) {
     return; // still guard after the second await, for the same reason
   }
 
+  currentPage = data.page;
   const hasActiveFilters = Object.entries(filters).some(([key, value]) => key !== 'sort' && value);
 
-  if (events.length === 0) {
+  if (data.events.length === 0) {
     list.innerHTML = hasActiveFilters
       ? '<p class="text-muted">No events match your search. Try adjusting the filters.</p>'
       : '<p class="text-muted">No events yet.</p>';
-    return;
+  } else {
+    list.innerHTML = data.events.map(eventCard).join('');
   }
 
-  list.innerHTML = events.map(eventCard).join('');
+  document.getElementById('page-indicator').textContent = `Page ${data.page} of ${data.totalPages}`;
+  document.getElementById('prev-page-btn').disabled = data.page <= 1;
+  document.getElementById('next-page-btn').disabled = data.page >= data.totalPages;
 }
 
-const debouncedSearch = debounce(() => loadResults(readFiltersFromForm()), 300);
+// Any actual filter change is a new search, so it always starts back at
+// page 1 - only the Previous/Next buttons move between pages of the same
+// search.
+const debouncedSearch = debounce(() => loadResults(readFiltersFromForm(), 1), 300);
 
 async function init() {
   const sessionUsername = await loadSession();
@@ -156,12 +167,20 @@ async function init() {
   // it's a deliberate action, not incidental typing.
   document.getElementById('search-form').addEventListener('submit', (e) => {
     e.preventDefault();
-    loadResults(readFiltersFromForm());
+    loadResults(readFiltersFromForm(), 1);
   });
 
   document.getElementById('clear-filters-btn').addEventListener('click', () => {
     document.getElementById('search-form').reset();
-    loadResults(readFiltersFromForm());
+    loadResults(readFiltersFromForm(), 1);
+  });
+
+  document.getElementById('prev-page-btn').addEventListener('click', () => {
+    loadResults(currentFilters, currentPage - 1);
+  });
+
+  document.getElementById('next-page-btn').addEventListener('click', () => {
+    loadResults(currentFilters, currentPage + 1);
   });
 
   // Live search: typing/changing a field re-searches automatically after a
@@ -174,7 +193,7 @@ async function init() {
   document.getElementById('filter-sort').addEventListener('change', debouncedSearch);
   document.getElementById('filter-available-only').addEventListener('change', debouncedSearch);
 
-  await loadResults(readFiltersFromForm());
+  await loadResults(readFiltersFromForm(), 1);
 }
 
 init();

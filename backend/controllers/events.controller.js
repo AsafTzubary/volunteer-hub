@@ -148,18 +148,27 @@ function resolveEventSort(sortParam) {
   return EVENT_SORT_OPTIONS[sortParam] || EVENT_SORT_OPTIONS.date_asc;
 }
 
+const EVENT_SEARCH_PAGE_SIZE = 9;
+
 async function searchEvents(req, res) {
   const filter = buildEventSearchFilter(req.query);
   const sort = resolveEventSort(req.query.sort);
+  const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+  const skip = (page - 1) * EVENT_SEARCH_PAGE_SIZE;
 
-  const events = await Event.find(filter)
-    .populate('manager', 'username fullName')
-    .populate('group', 'name')
-    .sort(sort)
-    .lean();
+  const [events, totalCount] = await Promise.all([
+    Event.find(filter)
+      .populate('manager', 'username fullName')
+      .populate('group', 'name')
+      .sort(sort)
+      .skip(skip)
+      .limit(EVENT_SEARCH_PAGE_SIZE)
+      .lean(),
+    Event.countDocuments(filter),
+  ]);
 
-  res.json(
-    events.map((event) => ({
+  res.json({
+    events: events.map((event) => ({
       id: event._id,
       title: event.title,
       category: event.category,
@@ -171,8 +180,11 @@ async function searchEvents(req, res) {
       status: computeEventStatus(event),
       manager: event.manager,
       group: { id: event.group._id, name: event.group.name },
-    }))
-  );
+    })),
+    page,
+    totalPages: Math.max(1, Math.ceil(totalCount / EVENT_SEARCH_PAGE_SIZE)),
+    totalCount,
+  });
 }
 
 

@@ -31,6 +31,18 @@ function rsvpSummary(event, viewerId) {
   };
 }
 
+// The stored `status` field only ever needs to record a manual, non-derivable
+// action (cancelling). "completed" and "full" are both fully determined by
+// the event's date and RSVP count, so we compute them fresh on every read
+// instead of trying to keep a stored field in sync via a background job.
+function computeEventStatus(event) {
+  if (event.status === 'cancelled') return 'cancelled';
+  if (new Date(event.date) < new Date()) return 'completed';
+  const goingCount = countByStatus(event.rsvps || [], 'going');
+  if (goingCount >= event.maxParticipants) return 'full';
+  return 'upcoming';
+}
+
 async function listGroupEvents(req, res) {
   const { groupId } = req.query;
   if (!groupId || !mongoose.isValidObjectId(groupId)) {
@@ -52,7 +64,7 @@ async function listGroupEvents(req, res) {
       address: event.address,
       date: event.date,
       maxParticipants: event.maxParticipants,
-      status: event.status,
+      status: computeEventStatus(event),
       manager: event.manager,
       createdAt: event.createdAt,
       ...rsvpSummary(event, user._id),
@@ -159,7 +171,7 @@ async function listUpcomingEvents(req, res) {
       address: event.address,
       date: event.date,
       maxParticipants: event.maxParticipants,
-      status: event.status,
+      status: computeEventStatus(event),
       manager: event.manager,
       group: { id: event.group._id, name: event.group.name },
       ...rsvpSummary(event, user._id),
@@ -186,7 +198,7 @@ async function listAllUpcomingEvents(req, res) {
       date: event.date,
       maxParticipants: event.maxParticipants,
       participantsCount: countByStatus(event.rsvps || [], 'going'),
-      status: event.status,
+      status: computeEventStatus(event),
       manager: event.manager,
       group: { id: event.group._id, name: event.group.name },
     }))
@@ -216,7 +228,7 @@ async function getEventDetails(req, res) {
     date: event.date,
     maxParticipants: event.maxParticipants,
     availablePlaces: event.maxParticipants - summary.participantsCount,
-    status: event.status,
+    status: computeEventStatus(event),
     group: event.group,
     manager: event.manager,
     isManager,

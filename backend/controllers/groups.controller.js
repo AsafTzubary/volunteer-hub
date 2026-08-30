@@ -11,6 +11,26 @@ const {
 
 const GROUPS_PAGE_SIZE = 9;
 
+// Group search parameters (task 70):
+//
+//   name        - case-insensitive partial match against the group's name.
+//   category    - exact match against the group's category.
+//   minMembers  - only groups with at least this many members.
+//   maxMembers  - only groups with at most this many members.
+//   createdFrom - only groups created on or after this date (ISO string).
+//   createdTo   - only groups created on or before this date (ISO string).
+//
+// Empty-field behavior: any of the above that is omitted or an empty string
+// is left out of the query entirely rather than treated as "match nothing" -
+// same convention already used by updateEvent (`if (x !== undefined) ...`).
+//
+// Sorting: results are sorted by createdAt descending (newest first) by
+// default, matching the existing unfiltered listGroups behavior. No other
+// sort options are exposed yet.
+//
+// Note: the Group model has no "city" field, so city is not a valid filter
+// despite being mentioned in an earlier draft of this task.
+
 async function listGroups(req, res) {
   const page = Math.max(1, parseInt(req.query.page, 10) || 1);
   const skip = (page - 1) * GROUPS_PAGE_SIZE;

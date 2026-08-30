@@ -1,3 +1,11 @@
+function debounce(fn, delayMs) {
+  let timeoutId;
+  return (...args) => {
+    clearTimeout(timeoutId);
+    timeoutId = setTimeout(() => fn(...args), delayMs);
+  };
+}
+
 const FILTER_LABELS = {
   address: 'Address',
   category: 'Category',
@@ -89,8 +97,15 @@ function eventCard(event) {
   `;
 }
 
+// Incremented on every search kicked off; a response only gets applied if
+// it's still the most recent request by the time it comes back. Without
+// this, a slow older request (e.g. a broad unfiltered search) could resolve
+// after a faster newer one and overwrite it with stale results.
+let searchRequestId = 0;
+
 async function loadResults(filters) {
   renderActiveFilters(filters);
+  const requestId = ++searchRequestId;
 
   const params = new URLSearchParams();
   Object.entries(filters).forEach(([key, value]) => {
@@ -98,6 +113,11 @@ async function loadResults(filters) {
   });
 
   const res = await fetch('/api/events/search?' + params.toString());
+
+  if (requestId !== searchRequestId) {
+    return; // a newer search has already started - discard this response
+  }
+
   const list = document.getElementById('results-list');
 
   if (!res.ok) {
@@ -106,6 +126,11 @@ async function loadResults(filters) {
   }
 
   const events = await res.json();
+
+  if (requestId !== searchRequestId) {
+    return; // still guard after the second await, for the same reason
+  }
+
   const hasActiveFilters = Object.entries(filters).some(([key, value]) => key !== 'sort' && value);
 
   if (events.length === 0) {
@@ -118,6 +143,8 @@ async function loadResults(filters) {
   list.innerHTML = events.map(eventCard).join('');
 }
 
+const debouncedSearch = debounce(() => loadResults(readFiltersFromForm()), 300);
+
 async function init() {
   const sessionUsername = await loadSession();
   if (!sessionUsername) return;
@@ -125,6 +152,8 @@ async function init() {
   document.getElementById('my-profile-link').href = profileUrl(sessionUsername);
   wireLogout();
 
+  // Explicit submit (Search button or Enter) runs immediately, no debounce -
+  // it's a deliberate action, not incidental typing.
   document.getElementById('search-form').addEventListener('submit', (e) => {
     e.preventDefault();
     loadResults(readFiltersFromForm());
@@ -134,6 +163,16 @@ async function init() {
     document.getElementById('search-form').reset();
     loadResults(readFiltersFromForm());
   });
+
+  // Live search: typing/changing a field re-searches automatically after a
+  // short pause, instead of requiring the Search button.
+  document.getElementById('filter-address').addEventListener('input', debouncedSearch);
+  document.getElementById('filter-category').addEventListener('input', debouncedSearch);
+  document.getElementById('filter-date-from').addEventListener('change', debouncedSearch);
+  document.getElementById('filter-date-to').addEventListener('change', debouncedSearch);
+  document.getElementById('filter-status').addEventListener('change', debouncedSearch);
+  document.getElementById('filter-sort').addEventListener('change', debouncedSearch);
+  document.getElementById('filter-available-only').addEventListener('change', debouncedSearch);
 
   await loadResults(readFiltersFromForm());
 }

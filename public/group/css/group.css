@@ -23,12 +23,3 @@
   font-weight: 600;
   flex-shrink: 0;
 }
-
-.category-badge {
-  display: inline-block;
-  background: #e7f3ff;
-  color: #0c63e4;
-  border-radius: 999px;
-  padding: 0.25rem 0.65rem;
-  font-size: 0.78rem;
-}

@@ -68,6 +68,13 @@ async function init() {
 
   populateForm(event);
 
+  const originalAddress = event.address || '';
+  const addressPicker = wireAddressAutocomplete({
+    inputId: 'address',
+    suggestionsId: 'address-suggestions',
+    confirmedId: 'address-confirmed',
+  });
+
   document.getElementById('edit-event-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     clearErrors();
@@ -77,9 +84,23 @@ async function init() {
       category: document.getElementById('category').value.trim(),
       description: document.getElementById('description').value.trim(),
       date: document.getElementById('date').value,
-      address: document.getElementById('address').value.trim(),
       maxParticipants: document.getElementById('maxParticipants').value,
     };
+
+    // An unchanged address is left out of the request so the coordinates
+    // already stored for it survive.
+    const place = addressPicker.getPlace();
+    const addressText = addressPicker.getText();
+    if (place) {
+      body.address = place.address;
+      body.latitude = place.latitude;
+      body.longitude = place.longitude;
+    } else if (!addressText) {
+      body.address = '';
+    } else if (addressText !== originalAddress) {
+      showFieldErrors({ address: 'Select an address from the suggestions.' });
+      return;
+    }
 
     const res = await fetch('/api/events/' + encodeURIComponent(eventId), {
       method: 'PUT',

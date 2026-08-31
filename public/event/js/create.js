@@ -1,73 +1,7 @@
-let selectedAddress = '';
-let selectedLatitude = null;
-let selectedLongitude = null;
-let debounceTimer = null;
+let addressPicker = null;
 
 function targetGroupId() {
   return new URLSearchParams(window.location.search).get('groupId');
-}
-
-function wireAddressSearch() {
-  const searchInput = document.getElementById('address-search');
-  const suggestionsList = document.getElementById('address-suggestions');
-  const confirmedEl = document.getElementById('address-confirmed');
-
-  searchInput.addEventListener('input', function () {
-    clearTimeout(debounceTimer);
-    selectedAddress = '';
-    selectedLatitude = null;
-    selectedLongitude = null;
-    confirmedEl.classList.add('d-none');
-
-    const q = this.value.trim();
-    if (q.length < 2) {
-      suggestionsList.classList.add('d-none');
-      suggestionsList.innerHTML = '';
-      return;
-    }
-
-    debounceTimer = setTimeout(async () => {
-      const res = await fetch('/api/places/autocomplete?q=' + encodeURIComponent(q));
-      if (!res.ok) return;
-      const data = await res.json();
-
-      suggestionsList.innerHTML = '';
-      if (!data.suggestions.length) {
-        suggestionsList.classList.add('d-none');
-        return;
-      }
-
-      data.suggestions.forEach((s) => {
-        const li = document.createElement('li');
-        li.className = 'list-group-item list-group-item-action small';
-        li.textContent = s.description;
-        li.addEventListener('click', async () => {
-          suggestionsList.classList.add('d-none');
-          searchInput.value = s.description;
-
-          const detailRes = await fetch('/api/places/details?placeId=' + encodeURIComponent(s.placeId));
-          if (!detailRes.ok) return;
-          const detail = await detailRes.json();
-
-          selectedAddress = detail.address;
-          selectedLatitude = detail.latitude;
-          selectedLongitude = detail.longitude;
-
-          confirmedEl.textContent = '✓ ' + detail.address;
-          confirmedEl.classList.remove('d-none');
-        });
-        suggestionsList.appendChild(li);
-      });
-
-      suggestionsList.classList.remove('d-none');
-    }, 300);
-  });
-
-  document.addEventListener('click', (e) => {
-    if (!searchInput.contains(e.target) && !suggestionsList.contains(e.target)) {
-      suggestionsList.classList.add('d-none');
-    }
-  });
 }
 
 async function init() {
@@ -98,13 +32,24 @@ async function init() {
   document.getElementById('cancel-link').href = '/group/index.html?id=' + encodeURIComponent(groupId);
   document.getElementById('create-event-content').classList.remove('d-none');
 
-  wireAddressSearch();
+  addressPicker = wireAddressAutocomplete({
+    inputId: 'address-search',
+    suggestionsId: 'address-suggestions',
+    confirmedId: 'address-confirmed',
+  });
 
   document.getElementById('create-event-form').addEventListener('submit', async (e) => {
     e.preventDefault();
 
     const errorBox = document.getElementById('form-error');
     errorBox.classList.add('d-none');
+
+    const place = addressPicker.getPlace();
+    if (addressPicker.getText() && !place) {
+      errorBox.textContent = 'Select an address from the suggestions.';
+      errorBox.classList.remove('d-none');
+      return;
+    }
 
     const saveBtn = document.getElementById('save-btn');
     saveBtn.disabled = true;
@@ -114,11 +59,10 @@ async function init() {
       title: document.getElementById('title').value.trim(),
       category: document.getElementById('category').value.trim(),
       description: document.getElementById('description').value.trim(),
-      address: selectedAddress,
+      address: place ? place.address : '',
       date: document.getElementById('date').value,
       maxParticipants: document.getElementById('maxParticipants').value,
-      ...(selectedLatitude !== null && { latitude: selectedLatitude }),
-      ...(selectedLongitude !== null && { longitude: selectedLongitude }),
+      ...(place && { latitude: place.latitude, longitude: place.longitude }),
     };
 
     const submitRes = await fetch('/api/events', {

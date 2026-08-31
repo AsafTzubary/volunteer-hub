@@ -8,37 +8,10 @@ const {
 
 const USERS_PAGE_SIZE = 9;
 
-// User search parameters:
-//
-//   name        - case-insensitive partial match against either the username
-//                 or the full name. One box covers both on purpose: people
-//                 looking for "dana" rarely know which of the two they are
-//                 remembering.
-//   city        - case-insensitive partial match against the user's city.
-//   interest    - case-insensitive partial match against any one of the
-//                 user's interest tags.
-//   friendsOnly - when set, only the viewer's own friends.
-//   createdFrom - only users who joined on or after this date (ISO string).
-//   createdTo   - only users who joined on or before this date (ISO string).
-//
-// Empty-field behavior: same convention as the group and event searches -
-// any omitted or blank param is left out of the query entirely rather than
-// excluding results.
-//
-// Sorting: username ascending by default. A people directory reads best
-// alphabetically, unlike groups/events where recency is the natural order;
-// `sort=createdAt_desc` gives newest members first.
-//
-// Note: email is deliberately absent from the response. getProfile only
-// reveals it on your own profile, so a directory listing must not become a
-// way around that.
-
 function escapeRegex(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-// Query params always arrive as strings, so a checkbox-style flag needs an
-// explicit check - otherwise `?friendsOnly=false` reads as "yes".
 function isFlagSet(value) {
   return value === 'true' || value === '1';
 }
@@ -56,8 +29,6 @@ function buildUserSearchFilter(query, viewer) {
     filter.city = { $regex: escapeRegex(city.trim()), $options: 'i' };
   }
 
-  // interests is an array of plain strings, so matching a regex against the
-  // field matches when *any* element matches - no $elemMatch needed.
   if (interest && interest.trim()) {
     filter.interests = { $regex: escapeRegex(interest.trim()), $options: 'i' };
   }
@@ -94,9 +65,6 @@ function resolveUserSort(sortParam) {
 }
 
 async function listUsers(req, res) {
-  // The viewer is loaded first because two parts of the response depend on
-  // it: the friendsOnly filter, and the per-user isFriend/isSelf flags the
-  // directory needs to render the right friend button.
   const viewer = await User.findOne({ username: req.session.username })
     .select('friends')
     .lean();
@@ -117,8 +85,6 @@ async function listUsers(req, res) {
     User.countDocuments(filter),
   ]);
 
-  // friends is symmetric (addFriend/removeFriend write both sides), so the
-  // viewer's own list is enough to decide isFriend for everyone listed.
   const friendIds = new Set((viewer.friends || []).map((id) => id.toString()));
 
   res.json({

@@ -29,8 +29,6 @@
   font-size: 0.72rem;
 }
 
-/* The name column has to be allowed to shrink for text-truncate to do
-   anything - flex items default to min-width:auto. */
 .user-identity {
   min-width: 0;
 }

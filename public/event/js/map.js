@@ -4,10 +4,11 @@ function formatEventDate(iso) {
 
 function eventCard(event) {
   const managerName = event.manager.fullName || event.manager.username;
+  const eventUrl = `/event/index.html?id=${encodeURIComponent(event.id)}`;
   return `
     <div class="card shadow-sm p-3">
       <div class="d-flex justify-content-between align-items-start mb-1">
-        <span class="fw-semibold small">${event.title}</span>
+        <a href="${eventUrl}" class="fw-semibold small text-decoration-none">${event.title}</a>
         <span class="category-badge ms-2">${event.category}</span>
       </div>
       <p class="text-muted small mb-1">${formatEventDate(event.date)}</p>

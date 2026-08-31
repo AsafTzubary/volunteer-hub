@@ -21,6 +21,12 @@ const EVENT_MAX_PARTICIPANTS_MAX = 500;
 
 const RSVP_STATUSES = ['going', 'interested', 'not_going'];
 
+const FULL_NAME_MAX_LENGTH = 60;
+const CITY_MAX_LENGTH = 60;
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const INTEREST_MAX_LENGTH = 30;
+const INTERESTS_MAX_COUNT = 10;
+
 function validateUsername(username) {
   if (username.length < USERNAME_MIN_LENGTH || username.length > USERNAME_MAX_LENGTH) {
     return `Username must be between ${USERNAME_MIN_LENGTH} and ${USERNAME_MAX_LENGTH} characters.`;
@@ -132,6 +138,44 @@ function validateRsvpStatus(status) {
   return null;
 }
 
+// Task 112: profile fields (fullName, email, city, interests) used to be
+// validated with one-off inline checks inside users.controller.js instead of
+// going through this shared module like every other create/update form does.
+// These four bring updateProfile in line with the rest of the app.
+
+function validateFullName(fullName) {
+  if (typeof fullName !== 'string' || fullName.trim().length > FULL_NAME_MAX_LENGTH) {
+    return `Full name must be ${FULL_NAME_MAX_LENGTH} characters or fewer.`;
+  }
+  return null;
+}
+
+function validateEmail(email) {
+  if (typeof email !== 'string' || (email.trim() !== '' && !EMAIL_REGEX.test(email.trim()))) {
+    return 'Invalid email address.';
+  }
+  return null;
+}
+
+function validateCity(city) {
+  if (typeof city !== 'string' || city.trim().length > CITY_MAX_LENGTH) {
+    return `City must be ${CITY_MAX_LENGTH} characters or fewer.`;
+  }
+  return null;
+}
+
+function validateInterests(interests) {
+  const isValid =
+    Array.isArray(interests) &&
+    interests.length <= INTERESTS_MAX_COUNT &&
+    interests.every((interest) => typeof interest === 'string' && interest.trim().length <= INTEREST_MAX_LENGTH);
+
+  if (!isValid) {
+    return `Interests must be up to ${INTERESTS_MAX_COUNT} tags, each ${INTEREST_MAX_LENGTH} characters or fewer.`;
+  }
+  return null;
+}
+
 module.exports = {
   USERNAME_MIN_LENGTH,
   USERNAME_MAX_LENGTH,
@@ -149,6 +193,10 @@ module.exports = {
   EVENT_MAX_PARTICIPANTS_MIN,
   EVENT_MAX_PARTICIPANTS_MAX,
   RSVP_STATUSES,
+  FULL_NAME_MAX_LENGTH,
+  CITY_MAX_LENGTH,
+  INTEREST_MAX_LENGTH,
+  INTERESTS_MAX_COUNT,
   validateUsername,
   validatePassword,
   validateGroupName,
@@ -163,4 +211,8 @@ module.exports = {
   validateEventDate,
   validateMaxParticipants,
   validateRsvpStatus,
+  validateFullName,
+  validateEmail,
+  validateCity,
+  validateInterests,
 };

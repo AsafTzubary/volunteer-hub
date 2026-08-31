@@ -31,10 +31,6 @@ function rsvpSummary(event, viewerId) {
   };
 }
 
-// The stored `status` field only ever needs to record a manual, non-derivable
-// action (cancelling). "completed" and "full" are both fully determined by
-// the event's date and RSVP count, so we compute them fresh on every read
-// instead of trying to keep a stored field in sync via a background job.
 function computeEventStatus(event) {
   if (event.status === 'cancelled') return 'cancelled';
   if (new Date(event.date) < new Date()) return 'completed';
@@ -43,38 +39,10 @@ function computeEventStatus(event) {
   return 'upcoming';
 }
 
-// Event search parameters (task 73):
-//
-//   address      - case-insensitive partial match against the event's address.
-//   category     - exact match against the event's category.
-//   dateFrom     - only events on or after this date (ISO string).
-//   dateTo       - only events on or before this date (ISO string).
-//   status       - one of 'upcoming' | 'full' | 'completed' | 'cancelled',
-//                  matched against computeEventStatus(event) - the same
-//                  derived value returned to clients elsewhere, not the raw
-//                  stored field, so "full"/"completed" filter correctly.
-//   availableOnly - when truthy, only events with at least one open spot
-//                  (i.e. computeEventStatus(event) !== 'full' and not
-//                  cancelled/completed).
-//
-// Empty-field behavior: same convention as group search - any omitted or
-// blank param is left out of the query rather than excluding results.
-//
-// Sorting: results are sorted by date ascending (soonest first), matching
-// the existing listAllUpcomingEvents/listUpcomingEvents behavior.
-//
-// Note: like groups, the Event model has no "city" field - address is used
-// as the closest available stand-in for location-based search.
-
 function escapeRegex(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-// Counts "going" RSVPs as a query-time expression, rather than in JS, so it
-// can be compared against maxParticipants inside a Mongo $expr. This is a
-// step up from the group-search $size trick since rsvps is an array of
-// subdocuments - we have to $filter down to the "going" ones first before
-// measuring how many there are.
 function goingCountExpr() {
   return {
     $size: {
@@ -87,11 +55,6 @@ function goingCountExpr() {
   };
 }
 
-// Builds the Mongo filter for searchEvents. Each applicable condition is
-// pushed independently into an $and array instead of merged into shared
-// field objects - that avoids having to manually reconcile a user-supplied
-// dateFrom/dateTo with the implicit "must be in the future" requirement that
-// the full/upcoming/availableOnly filters add on top.
 function buildEventSearchFilter(query) {
   const { address, category, dateFrom, dateTo, status, availableOnly } = query;
   const conditions = [];
@@ -130,8 +93,6 @@ function buildEventSearchFilter(query) {
   } else if (status === 'upcoming') {
     conditions.push({ status: { $ne: 'cancelled' } }, { date: { $gte: now } }, hasRoomExpr);
   } else if (availableOnly) {
-    // Not already constrained by a status above - availableOnly on its own
-    // means the same thing as status=upcoming's "has room" condition.
     conditions.push({ status: { $ne: 'cancelled' } }, { date: { $gte: now } }, hasRoomExpr);
   }
 
@@ -434,8 +395,6 @@ async function deleteEvent(req, res) {
   if (event.status === 'cancelled') {
     return res.status(409).json({ error: 'This event is already cancelled.' });
   }
-  // Cancelling marks the event rather than deleting it, so history and past
-  // RSVPs are preserved and the event can still be viewed by its manager/group.
   await Event.updateOne({ _id: id }, { $set: { status: 'cancelled' } });
   res.json({ message: 'Event cancelled successfully.' });
 }

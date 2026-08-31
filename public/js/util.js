@@ -17,3 +17,7 @@ function wireLogout() {
 function profileUrl(username) {
   return '/profile/index.html?username=' + encodeURIComponent(username);
 }
+
+function isAdmin(session) {
+  return session && session.role === 'admin';
+}

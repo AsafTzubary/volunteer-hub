@@ -8,3 +8,10 @@ document.querySelector('nav').innerHTML = `
     </div>
   </div>
 `;
+
+(async () => {
+  const session = await loadSession();
+  if (isAdmin(session)) {
+    document.getElementById('admin-panel-btn').classList.remove('d-none');
+  }
+})();

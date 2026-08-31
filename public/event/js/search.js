@@ -150,8 +150,9 @@ async function loadResults(filters, page = 1) {
 const debouncedSearch = debounce(() => loadResults(readFiltersFromForm(), 1), 300);
 
 async function init() {
-  const sessionUsername = await loadSession();
-  if (!sessionUsername) return;
+  const session = await loadSession();
+  if (!session) return;
+  const { username: sessionUsername } = session;
 
   document.getElementById('my-profile-link').href = profileUrl(sessionUsername);
   wireLogout();

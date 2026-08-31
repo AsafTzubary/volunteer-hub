@@ -431,8 +431,9 @@ async function refreshMembers(groupId) {
 }
 
 async function init() {
-  const sessionUsername = await loadSession();
-  if (!sessionUsername) return;
+  const session = await loadSession();
+  if (!session) return;
+  const { username: sessionUsername } = session;
   document.getElementById('my-profile-link').href = profileUrl(sessionUsername);
   wireLogout();
   document.getElementById('confirm-delete-btn').addEventListener('click', confirmDelete);

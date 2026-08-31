@@ -1,7 +1,5 @@
-const path = require('path');
 const { logError, newRequestId } = require('../utils/logger');
 
-const ERROR_PAGE = path.join(__dirname, '..', '..', 'public', '500.html');
 const MONGO_DUPLICATE_KEY = 11000;
 const GENERIC_SERVER_MESSAGE = 'Something went wrong on our end. Please try again.';
 
@@ -39,11 +37,7 @@ function sendErrorPage(req, res, status) {
     return res.status(status).type('text/plain').send(GENERIC_SERVER_MESSAGE);
   }
 
-  res.status(status).sendFile(ERROR_PAGE, (sendError) => {
-    if (!sendError) return;
-    if (res.headersSent) return res.end();
-    res.type('text/plain').send(GENERIC_SERVER_MESSAGE);
-  });
+  res.redirect('/500.html');
 }
 
 // eslint-disable-next-line no-unused-vars -- Express identifies error handlers

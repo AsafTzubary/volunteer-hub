@@ -1,9 +1,8 @@
 const express = require('express');
-const { requireDatabase } = require('../middlewares/requireDatabase');
 const apiRoutes = require('./api');
 
 const router = express.Router();
 
-router.use('/api', requireDatabase, apiRoutes);
+router.use('/api', apiRoutes);
 
 module.exports = router;

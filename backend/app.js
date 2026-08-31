@@ -18,4 +18,14 @@ app.use(
 app.use(mainRouter);
 app.use(express.static(path.join(__dirname, '..', 'public')));
 
+// Task 114: catch-all for anything that didn't match a route or a static
+// file. API requests get a JSON 404 (consistent with every other API
+// error response); everything else gets the human-readable 404 page.
+app.use((req, res) => {
+  if (req.path.startsWith('/api/')) {
+    return res.status(404).json({ error: 'Not found.' });
+  }
+  res.status(404).sendFile(path.join(__dirname, '..', 'public', '404.html'));
+});
+
 module.exports = app;

@@ -30,7 +30,7 @@ async function init() {
   const res = await fetch('/api/events/' + encodeURIComponent(eventId) + '/participants');
 
   if (res.status === 403) {
-    document.getElementById('not-authorized').classList.remove('d-none');
+    window.location.href = '/403.html';
     return;
   }
   if (!res.ok) {

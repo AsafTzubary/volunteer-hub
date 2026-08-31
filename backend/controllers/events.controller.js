@@ -340,6 +340,8 @@ async function listAllUpcomingEvents(req, res) {
       category: event.category,
       description: event.description,
       address: event.address,
+      latitude: event.latitude,
+      longitude: event.longitude,
       date: event.date,
       maxParticipants: event.maxParticipants,
       participantsCount: countByStatus(event.rsvps || [], 'going'),

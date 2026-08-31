@@ -10,32 +10,58 @@
   />
   <link rel="stylesheet" href="css/styles.css" />
 </head>
-<body class="d-flex align-items-center justify-content-center vh-100 bg-light">
-  <div class="card shadow-sm" style="width: 100%; max-width: 380px;">
-    <div class="card-body p-4">
-      <h1 class="h4 mb-1 text-center">Volunteer Hub</h1>
-      <p class="text-muted text-center mb-4">Log in to continue</p>
+<body class="bg-light">
+  <main class="container d-flex align-items-center min-vh-100 py-4">
+    <div class="row justify-content-center align-items-center g-4 w-100">
 
-      <form id="login-form" novalidate>
-        <div class="mb-3">
-          <label for="username" class="form-label">Username</label>
-          <input type="text" class="form-control" id="username" name="username" autocomplete="username" required />
+      <div class="col-lg-5">
+        <div class="card shadow-sm mx-auto" style="max-width: 380px;">
+          <div class="card-body p-4">
+            <h1 class="h4 mb-1 text-center">Volunteer Hub</h1>
+            <p class="text-muted text-center mb-4">Log in to continue</p>
+
+            <form id="login-form" novalidate>
+              <div class="mb-3">
+                <label for="username" class="form-label">Username</label>
+                <input type="text" class="form-control" id="username" name="username" autocomplete="username" required />
+              </div>
+              <div class="mb-3">
+                <label for="password" class="form-label">Password</label>
+                <input type="password" class="form-control" id="password" name="password" autocomplete="current-password" required />
+              </div>
+
+              <div id="error-message" class="alert alert-danger d-none" role="alert"></div>
+
+              <button type="submit" class="btn btn-primary w-100 mb-3">Log In</button>
+
+              <p class="text-center text-muted mb-0">
+                Don't have an account? <a href="register.html">Register</a>
+              </p>
+            </form>
+          </div>
         </div>
-        <div class="mb-3">
-          <label for="password" class="form-label">Password</label>
-          <input type="password" class="form-control" id="password" name="password" autocomplete="current-password" required />
-        </div>
+      </div>
 
-        <div id="error-message" class="alert alert-danger d-none" role="alert"></div>
+      <div class="col-lg-6">
+        <video
+          class="w-100 d-block rounded shadow-sm"
+          style="max-height: 60vh"
+          controls
+          loop
+          playsinline
+          preload="metadata"
+          aria-label="Volunteer Hub demo video"
+        >
+          <source src="video/demo.mp4" type="video/mp4" />
+          <p class="small mb-0">
+            Your browser can't play embedded video.
+            <a href="video/demo.mp4">Download the demo</a> instead.
+          </p>
+        </video>
+      </div>
 
-        <button type="submit" class="btn btn-primary w-100 mb-3">Log In</button>
-
-        <p class="text-center text-muted mb-0">
-          Don't have an account? <a href="register.html">Register</a>
-        </p>
-      </form>
     </div>
-  </div>
+  </main>
 
   <script src="js/login.js"></script>
 </body>

@@ -340,6 +340,8 @@ async function listAllUpcomingEvents(req, res) {
       category: event.category,
       description: event.description,
       address: event.address,
+      latitude: event.latitude,
+      longitude: event.longitude,
       date: event.date,
       maxParticipants: event.maxParticipants,
       participantsCount: countByStatus(event.rsvps || [], 'going'),
@@ -535,7 +537,13 @@ async function updateEvent(req, res) {
   if (longitude !== undefined) updates.longitude = Number(longitude);
   if (date !== undefined) updates.date = new Date(date);
   if (maxParticipants !== undefined) updates.maxParticipants = Number(maxParticipants);
-  const updatedEvent = await Event.findByIdAndUpdate(id, { $set: updates }, { new: true, lean: true });
+  const update = { $set: updates };
+  // Coordinates describe the address, so saving an address without them must
+  // not leave the previous ones behind.
+  if (address !== undefined && latitude === undefined && longitude === undefined) {
+    update.$unset = { latitude: '', longitude: '' };
+  }
+  const updatedEvent = await Event.findByIdAndUpdate(id, update, { new: true, lean: true });
   res.json({
     id: updatedEvent._id,
     title: updatedEvent.title,

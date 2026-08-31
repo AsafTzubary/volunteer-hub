@@ -18,6 +18,13 @@ function httpsGet(url) {
   });
 }
 
+// The Maps JavaScript API runs in the browser, so unlike the calls below the
+// key cannot be proxied. Returns null when unset so the map page can fall back
+// to a list-only view.
+router.get('/maps-key', requireAuth, (req, res) => {
+  res.json({ key: process.env.GOOGLE_MAPS_API_KEY || null });
+});
+
 router.get('/autocomplete', requireAuth, asyncHandler(async (req, res) => {
   const { q } = req.query;
   if (!q || q.trim().length < 2) {

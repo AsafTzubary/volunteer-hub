@@ -1,19 +1,21 @@
-// Scoped to 500, not all 5xx: the Places routes answer 502 when Google is
-// unhappy, and each caller degrades gracefully from that on its own.
-(function guardAgainstServerErrors() {
-  const originalFetch = window.fetch.bind(window);
+const originalFetch = window.fetch.bind(window);
 
-  window.fetch = async function (...args) {
-    const response = await originalFetch(...args);
-    if (response.status === 500) {
-      const requestId = response.headers.get('X-Request-Id');
-      window.location.href = requestId
-        ? '/500.html?ref=' + encodeURIComponent(requestId)
-        : '/500.html';
-    }
-    return response;
-  };
-})();
+window.fetch = async function (...args) {
+  const response = await originalFetch(...args);
+  if (response.status >= 500) {
+    const params = new URLSearchParams({ status: response.status });
+    const requestId = response.headers.get('X-Request-Id');
+    if (requestId) params.set('ref', requestId);
+    window.location.href = '/500.html?' + params;
+  }
+  return response;
+};
+
+// For callers that recover from an upstream failure on their own instead of
+// giving up the whole page.
+function fetchWithoutErrorPage(...args) {
+  return originalFetch(...args);
+}
 
 async function loadSession() {
   const res = await fetch('/api/auth/me');

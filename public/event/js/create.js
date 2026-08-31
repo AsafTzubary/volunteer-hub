@@ -7,6 +7,12 @@ function targetGroupId() {
   return new URLSearchParams(window.location.search).get('groupId');
 }
 
+function showAddressLookupError(suggestionsList) {
+  suggestionsList.innerHTML =
+    '<li class="list-group-item small text-muted">Address lookup is unavailable right now. You can keep filling in the rest of the form.</li>';
+  suggestionsList.classList.remove('d-none');
+}
+
 function wireAddressSearch() {
   const searchInput = document.getElementById('address-search');
   const suggestionsList = document.getElementById('address-suggestions');
@@ -27,8 +33,11 @@ function wireAddressSearch() {
     }
 
     debounceTimer = setTimeout(async () => {
-      const res = await fetch('/api/places/autocomplete?q=' + encodeURIComponent(q));
-      if (!res.ok) return;
+      const res = await fetchWithoutErrorPage('/api/places/autocomplete?q=' + encodeURIComponent(q));
+      if (!res.ok) {
+        showAddressLookupError(suggestionsList);
+        return;
+      }
       const data = await res.json();
 
       suggestionsList.innerHTML = '';
@@ -45,8 +54,11 @@ function wireAddressSearch() {
           suggestionsList.classList.add('d-none');
           searchInput.value = s.description;
 
-          const detailRes = await fetch('/api/places/details?placeId=' + encodeURIComponent(s.placeId));
-          if (!detailRes.ok) return;
+          const detailRes = await fetchWithoutErrorPage('/api/places/details?placeId=' + encodeURIComponent(s.placeId));
+          if (!detailRes.ok) {
+            showAddressLookupError(suggestionsList);
+            return;
+          }
           const detail = await detailRes.json();
 
           selectedAddress = detail.address;

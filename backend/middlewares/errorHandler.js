@@ -34,7 +34,11 @@ function clientMessage(status, err) {
   return hasClientSafeMessage(err) ? err.message : 'Request could not be processed.';
 }
 
-function sendErrorPage(res, status) {
+function sendErrorPage(req, res, status) {
+  if (!req.accepts('html')) {
+    return res.status(status).type('text/plain').send(GENERIC_SERVER_MESSAGE);
+  }
+
   res.status(status).sendFile(ERROR_PAGE, (sendError) => {
     if (!sendError) return;
     if (res.headersSent) return res.end();
@@ -60,7 +64,7 @@ function errorHandler(err, req, res, next) {
     });
   }
 
-  sendErrorPage(res, status);
+  sendErrorPage(req, res, status);
 }
 
 module.exports = { assignRequestId, errorHandler };

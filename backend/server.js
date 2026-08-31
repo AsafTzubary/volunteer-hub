@@ -20,6 +20,6 @@ connectDB()
     app.listen(PORT, () => console.log(`Volunteer Hub running on http://localhost:${PORT}`));
   })
   .catch((err) => {
-    console.error('Failed to connect to MongoDB', err);
+    logError(err, { status: 503 });
     process.exit(1);
   });

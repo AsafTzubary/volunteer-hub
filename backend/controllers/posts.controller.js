@@ -51,6 +51,7 @@ async function listGroupPosts(req, res) {
       likesCount: post.likes.length,
       commentsCount: post.comments.length,
       createdAt: post.createdAt,
+      editedAt: post.editedAt,
     }))
   );
 }
@@ -110,6 +111,7 @@ async function createPost(req, res) {
     likesCount: 0,
     commentsCount: 0,
     createdAt: populated.createdAt,
+    editedAt: populated.editedAt,
   });
 }
 async function deletePost(req, res) {
@@ -128,6 +130,53 @@ async function deletePost(req, res) {
   }
   await Post.deleteOne({ _id: id });
   return res.status(200).json({ message: 'Post deleted successfully' });
+}
+
+async function updatePost(req, res) {
+  const { id } = req.params;
+  if (!mongoose.isValidObjectId(id)) return res.status(404).json({ error: 'Post not found.' });
+
+  const post = await Post.findById(id).select('author content imageUrl').lean();
+  if (!post) return res.status(404).json({ error: 'Post not found.' });
+
+  const user = await User.findOne({ username: req.session.username }).select('_id').lean();
+  if (!post.author.equals(user._id)) {
+    return res.status(403).json({ error: 'Only the post author can edit this post.' });
+  }
+
+  const { content, imageData, removeImage } = req.body;
+  const updates = {};
+
+  if (content !== undefined) {
+    const contentError = validatePostContent(content);
+    if (contentError) return res.status(400).json({ error: contentError });
+    if (content.trim() !== post.content) updates.content = content.trim();
+  }
+
+  if (removeImage) {
+    if (post.imageUrl) {
+      updates.postType = 'text';
+      updates.imageUrl = '';
+    }
+  } else if (imageData) {
+    const savedPath = saveBase64Image(imageData);
+    if (!savedPath) return res.status(400).json({ error: 'Invalid image format.' });
+    updates.postType = 'image';
+    updates.imageUrl = savedPath;
+  }
+
+  // A save that changes nothing should not mark the post as edited.
+  const hasChanges = Object.keys(updates).length > 0;
+  if (hasChanges) updates.editedAt = new Date();
+
+  const updated = await (hasChanges
+    ? Post.findByIdAndUpdate(id, { $set: updates }, { new: true })
+    : Post.findById(id))
+    .populate('author', 'username fullName')
+    .populate('group', 'name')
+    .lean();
+
+  res.json(formatPost(updated));
 }
 
 const FEED_PAGE_SIZE = 10;
@@ -179,7 +228,8 @@ function formatPost(post) {
     likesCount: post.likes ? post.likes.length : 0,
     commentsCount: post.comments ? post.comments.length : 0,
     createdAt: post.createdAt,
+    editedAt: post.editedAt || null,
   };
 }
 
-module.exports = { listGroupPosts, createPost, deletePost, getFeed };
+module.exports = { listGroupPosts, createPost, updatePost, deletePost, getFeed };

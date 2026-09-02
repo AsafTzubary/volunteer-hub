@@ -119,6 +119,7 @@ async function confirmDeletePost() {
     alert(data.error || 'Failed to delete post.');
     return;
   } else {
+    currentPosts = currentPosts.filter((post) => post.id !== pendingDeletePostId);
     document.querySelector('[data-post-id="' + pendingDeletePostId + '"]').remove();
     bootstrap.Modal.getInstance(document.getElementById('delete-post-modal')).hide();
   }
@@ -173,42 +174,155 @@ function renderActionButtons(group) {
   }
 }
 
-function postCard(post, canDelete) {
+let currentPosts = [];
+let postsContext = { sessionUsername: '', isManager: false };
+
+function findPost(postId) {
+  return currentPosts.find((post) => post.id === postId);
+}
+
+function canEditPost(post) {
+  return post.author.username === postsContext.sessionUsername;
+}
+
+function canDeletePost(post) {
+  return postsContext.isManager || canEditPost(post);
+}
+
+function postCard(post, canDelete, canEdit) {
   const authorName = post.author.fullName || post.author.username;
   const date = new Date(post.createdAt).toLocaleDateString();
+  const edited = post.editedAt ? ' · edited' : '';
   const media = post.postType === 'image' && post.imageUrl
     ? `<img src="${post.imageUrl}" alt="post image" class="img-fluid rounded mt-2" style="max-height:300px" />`
+    : '';
+  const actions = canEdit || canDelete
+    ? `<div class="d-flex gap-2 mt-2">
+        ${canEdit ? `<button class="btn btn-sm btn-outline-secondary edit-post-btn" data-id="${post.id}">Edit</button>` : ''}
+        ${canDelete ? `<button class="btn btn-sm btn-outline-danger delete-post-btn" data-id="${post.id}">Delete</button>` : ''}
+      </div>`
     : '';
   return `
     <div class="border rounded p-3 mb-3" data-post-id="${post.id}">
       <div class="d-flex justify-content-between align-items-center mb-1">
         <a href="${profileUrl(post.author.username)}" class="fw-semibold text-decoration-none small">${authorName}</a>
-        <span class="text-muted" style="font-size:0.72rem">${date}</span>
+        <span class="text-muted" style="font-size:0.72rem">${date}${edited}</span>
       </div>
       <p class="mb-0 small">${post.content}</p>
       ${media}
-      ${canDelete ? `<button class="btn btn-sm btn-outline-danger delete-post-btn mt-2" data-id="${post.id}">Delete</button>` : ''}
+      ${actions}
     </div>
   `;
 }
 
-function renderPosts(posts, sessionUsername, isManager) {
+function postEditForm(post) {
+  const currentImage = post.postType === 'image' && post.imageUrl
+    ? `
+      <img src="${post.imageUrl}" alt="post image" class="img-fluid rounded mb-2" style="max-height:180px" />
+      <div class="form-check mb-2">
+        <input class="form-check-input edit-post-remove-image" type="checkbox" id="remove-image-${post.id}" />
+        <label class="form-check-label small" for="remove-image-${post.id}">Remove this image</label>
+      </div>`
+    : '';
+  return `
+    <form class="post-edit-form">
+      <div class="mb-2">
+        <textarea class="form-control form-control-sm edit-post-content" rows="3" maxlength="2000" required>${post.content}</textarea>
+      </div>
+      ${currentImage}
+      <div class="mb-2">
+        <input type="file" accept="image/*" class="form-control form-control-sm edit-post-image" />
+      </div>
+      <p class="edit-post-error text-danger small mb-2 d-none"></p>
+      <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary btn-sm">Save</button>
+        <button type="button" class="btn btn-outline-secondary btn-sm cancel-edit-btn">Cancel</button>
+      </div>
+    </form>
+  `;
+}
+
+function postCardEl(postId) {
+  return document.querySelector('[data-post-id="' + postId + '"]');
+}
+
+function renderPostCard(post) {
+  return postCard(post, canDeletePost(post), canEditPost(post));
+}
+
+function showPostCard(post) {
+  postCardEl(post.id).outerHTML = renderPostCard(post);
+  wirePostCard(postCardEl(post.id));
+}
+
+function wirePostCard(card) {
+  const editBtn = card.querySelector('.edit-post-btn');
+  if (editBtn) editBtn.addEventListener('click', () => startEditPost(editBtn.dataset.id));
+  const deleteBtn = card.querySelector('.delete-post-btn');
+  if (deleteBtn) deleteBtn.addEventListener('click', () => handleDeletePostClick(deleteBtn.dataset.id));
+}
+
+function startEditPost(postId) {
+  const post = findPost(postId);
+  const card = postCardEl(postId);
+  card.innerHTML = postEditForm(post);
+  card.querySelector('.cancel-edit-btn').addEventListener('click', () => showPostCard(post));
+  card.querySelector('.post-edit-form').addEventListener('submit', function (e) {
+    e.preventDefault();
+    saveEditPost(post, card);
+  });
+}
+
+async function saveEditPost(post, card) {
+  const errorEl = card.querySelector('.edit-post-error');
+  errorEl.classList.add('d-none');
+
+  const removeImageInput = card.querySelector('.edit-post-remove-image');
+  const removeImage = removeImageInput ? removeImageInput.checked : false;
+  const file = card.querySelector('.edit-post-image').files[0];
+  const body = {
+    content: card.querySelector('.edit-post-content').value,
+    imageData: file && !removeImage ? await readFileAsBase64(file) : null,
+    removeImage,
+  };
+
+  const buttons = card.querySelectorAll('.post-edit-form button');
+  buttons.forEach((btn) => (btn.disabled = true));
+  const res = await fetch('/api/posts/' + encodeURIComponent(post.id), {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  const data = await res.json();
+  buttons.forEach((btn) => (btn.disabled = false));
+
+  if (!res.ok) {
+    errorEl.textContent = data.error || 'Failed to update post.';
+    errorEl.classList.remove('d-none');
+    return;
+  }
+
+  Object.assign(post, data);
+  showPostCard(post);
+}
+
+function renderPosts(posts) {
+  currentPosts = posts;
   const list = document.getElementById('posts-list');
   if (!posts.length) {
     list.innerHTML = '<p class="text-muted small mb-0">No posts yet.</p>';
     return;
   }
-  list.innerHTML = posts.map((post) => postCard(post, isManager || post.author.username === sessionUsername)).join('')
-  list.querySelectorAll('.delete-post-btn').forEach((btn) => {
-  btn.addEventListener('click', () => handleDeletePostClick(btn.dataset.id));
-  });
+  list.innerHTML = posts.map((post) => renderPostCard(post)).join('');
+  list.querySelectorAll('[data-post-id]').forEach((card) => wirePostCard(card));
 }
 
 async function loadPosts(groupId, sessionUsername, isManager) {
+  postsContext = { sessionUsername, isManager };
   const res = await fetch('/api/posts?groupId=' + encodeURIComponent(groupId));
   if (!res.ok) return;
   const posts = await res.json();
-  renderPosts(posts, sessionUsername, isManager);
+  renderPosts(posts);
 }
 
 function formatEventDate(iso) {
@@ -404,7 +518,9 @@ function wirePostForm(groupId) {
     const list = document.getElementById('posts-list');
     const placeholder = list.querySelector('p.text-muted');
     if (placeholder) placeholder.remove();
-    list.insertAdjacentHTML('afterbegin', postCard(data, true));
+    currentPosts.unshift(data);
+    list.insertAdjacentHTML('afterbegin', renderPostCard(data));
+    wirePostCard(list.firstElementChild);
     this.reset();
   });
 }
@@ -431,8 +547,9 @@ async function refreshMembers(groupId) {
 }
 
 async function init() {
-  const sessionUsername = await loadSession();
-  if (!sessionUsername) return;
+  const session = await loadSession();
+  if (!session) return;
+  const { username: sessionUsername } = session;
   document.getElementById('my-profile-link').href = profileUrl(sessionUsername);
   wireLogout();
   document.getElementById('confirm-delete-btn').addEventListener('click', confirmDelete);

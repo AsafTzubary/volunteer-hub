@@ -97,10 +97,6 @@ function eventCard(event) {
   `;
 }
 
-// Incremented on every search kicked off; a response only gets applied if
-// it's still the most recent request by the time it comes back. Without
-// this, a slow older request (e.g. a broad unfiltered search) could resolve
-// after a faster newer one and overwrite it with stale results.
 let searchRequestId = 0;
 let currentFilters = {};
 let currentPage = 1;
@@ -119,7 +115,7 @@ async function loadResults(filters, page = 1) {
   const res = await fetch('/api/events/search?' + params.toString());
 
   if (requestId !== searchRequestId) {
-    return; // a newer search has already started - discard this response
+    return;
   }
 
   const list = document.getElementById('results-list');
@@ -132,7 +128,7 @@ async function loadResults(filters, page = 1) {
   const data = await res.json();
 
   if (requestId !== searchRequestId) {
-    return; // still guard after the second await, for the same reason
+    return;
   }
 
   currentPage = data.page;
@@ -151,20 +147,16 @@ async function loadResults(filters, page = 1) {
   document.getElementById('next-page-btn').disabled = data.page >= data.totalPages;
 }
 
-// Any actual filter change is a new search, so it always starts back at
-// page 1 - only the Previous/Next buttons move between pages of the same
-// search.
 const debouncedSearch = debounce(() => loadResults(readFiltersFromForm(), 1), 300);
 
 async function init() {
-  const sessionUsername = await loadSession();
-  if (!sessionUsername) return;
+  const session = await loadSession();
+  if (!session) return;
+  const { username: sessionUsername } = session;
 
   document.getElementById('my-profile-link').href = profileUrl(sessionUsername);
   wireLogout();
 
-  // Explicit submit (Search button or Enter) runs immediately, no debounce -
-  // it's a deliberate action, not incidental typing.
   document.getElementById('search-form').addEventListener('submit', (e) => {
     e.preventDefault();
     loadResults(readFiltersFromForm(), 1);
@@ -183,8 +175,6 @@ async function init() {
     loadResults(currentFilters, currentPage + 1);
   });
 
-  // Live search: typing/changing a field re-searches automatically after a
-  // short pause, instead of requiring the Search button.
   document.getElementById('filter-address').addEventListener('input', debouncedSearch);
   document.getElementById('filter-category').addEventListener('input', debouncedSearch);
   document.getElementById('filter-date-from').addEventListener('change', debouncedSearch);

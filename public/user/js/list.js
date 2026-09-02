@@ -1,3 +1,6 @@
+// Avatar helpers mirror the ones on the profile page. The profile page draws
+// its big avatar on a canvas; a grid of small circles is cheaper as a styled
+// div, so only the colour/initials logic carries over.
 const AVATAR_COLORS = ['#4f6ef7', '#e05c97', '#20b090', '#e07c3a', '#9b59b6', '#2980b9', '#16a085'];
 
 function pickColor(username) {
@@ -12,6 +15,8 @@ function getInitials(fullName, username) {
   return username[0];
 }
 
+// Cards are built as HTML strings, and fullName/city/interests are free text
+// the user typed themselves - so anything interpolated has to be escaped.
 function escapeHtml(value) {
   return String(value)
     .replace(/&/g, '&amp;')
@@ -38,6 +43,8 @@ const FILTER_LABELS = {
   friendsOnly: 'Friends only',
 };
 
+// Filter key -> input id. Keeping the mapping in one place means reading the
+// form and clearing a single chip can't drift apart.
 const FILTER_FIELD_IDS = {
   name: 'filter-name',
   city: 'filter-city',
@@ -163,6 +170,10 @@ function showStatus(message) {
   statusTimeoutId = setTimeout(() => el.classList.add('d-none'), 4000);
 }
 
+// Incremented on every search kicked off; a response only gets applied if
+// it's still the most recent request by the time it comes back - the same
+// guard the event search uses, so a slow broad search can't land on top of
+// a faster narrow one.
 let searchRequestId = 0;
 let currentFilters = {};
 let currentPage = 1;
@@ -181,7 +192,7 @@ async function loadResults(filters, page = 1) {
   const res = await fetch('/api/users?' + params.toString());
 
   if (requestId !== searchRequestId) {
-    return;
+    return; // a newer search has already started - discard this response
   }
 
   const grid = document.getElementById('users-grid');
@@ -194,7 +205,7 @@ async function loadResults(filters, page = 1) {
   const data = await res.json();
 
   if (requestId !== searchRequestId) {
-    return;
+    return; // still guard after the second await, for the same reason
   }
 
   currentPage = data.page;
@@ -222,6 +233,9 @@ function setFriendButtonState(btn, isFriend) {
   btn.classList.toggle('btn-outline-primary', !isFriend);
 }
 
+// The friend count on a card is that user's own total. Friendship is mutual
+// (both sides are written server-side), so adding or removing moves it by
+// exactly one - no refetch needed.
 function bumpFriendCount(card, delta) {
   const countEl = card.querySelector('[data-friend-count]');
   if (!countEl) return;
@@ -247,6 +261,8 @@ async function toggleFriend(btn) {
     return;
   }
 
+  // Unfriending while filtering by friends means the card no longer belongs
+  // in the results, so re-run the search rather than leave a stale card.
   if (wasFriend && currentFilters.friendsOnly) {
     await loadResults(currentFilters, currentPage);
     return;
@@ -256,15 +272,22 @@ async function toggleFriend(btn) {
   bumpFriendCount(card, wasFriend ? -1 : 1);
 }
 
+// Any actual filter change is a new search, so it always starts back at
+// page 1 - only the Previous/Next buttons move between pages of the same
+// search.
 const debouncedSearch = debounce(() => loadResults(readFiltersFromForm(), 1), 300);
 
 async function init() {
   const session = await loadSession();
   if (!session) return;
+  const { username: sessionUsername } = session;
 
-  document.getElementById('my-profile-link').href = profileUrl(session.username);
+  document.getElementById('my-profile-link').href = profileUrl(sessionUsername);
   wireLogout();
 
+  // There is no Search button - the fields below search as you change them.
+  // Enter is still handled because browsers that do implicit submission on a
+  // buttonless form would otherwise reload the page.
   document.getElementById('search-form').addEventListener('submit', (e) => {
     e.preventDefault();
     loadResults(readFiltersFromForm(), 1);
@@ -283,11 +306,14 @@ async function init() {
     loadResults(currentFilters, currentPage + 1);
   });
 
+  // Delegated, so the buttons keep working across re-renders of the grid.
   document.getElementById('users-grid').addEventListener('click', (e) => {
     const btn = e.target.closest('[data-friend-btn]');
     if (btn) toggleFriend(btn);
   });
 
+  // Live search: typing/changing a field re-searches automatically after a
+  // short pause.
   document.getElementById(FILTER_FIELD_IDS.name).addEventListener('input', debouncedSearch);
   document.getElementById(FILTER_FIELD_IDS.city).addEventListener('input', debouncedSearch);
   document.getElementById(FILTER_FIELD_IDS.interest).addEventListener('input', debouncedSearch);

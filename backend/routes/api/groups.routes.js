@@ -1,4 +1,5 @@
 const express = require('express');
+const { asyncHandler } = require('../../middlewares/asyncHandler');
 const { requireAuth } = require('../../middlewares/auth');
 const {
   listGroups,
@@ -15,15 +16,15 @@ const {
 
 const router = express.Router();
 
-router.get('/', requireAuth, listGroups);
-router.get('/mine', requireAuth, getManagedGroup);
-router.get('/:id', requireAuth, getGroupDetails);
-router.post('/', requireAuth, createGroup);
-router.put('/:id', requireAuth, updateGroup);
-router.delete('/:id', requireAuth, deleteGroup);
-router.post('/:id/join', requireAuth, joinGroup);
-router.post('/:id/leave', requireAuth, leaveGroup);
-router.delete('/:id/members/:username', requireAuth, removeMember);
-router.post('/:id/manager/:username', requireAuth, transferOwnership);
+router.get('/', requireAuth, asyncHandler(listGroups));
+router.get('/mine', requireAuth, asyncHandler(getManagedGroup));
+router.get('/:id', requireAuth, asyncHandler(getGroupDetails));
+router.post('/', requireAuth, asyncHandler(createGroup));
+router.put('/:id', requireAuth, asyncHandler(updateGroup));
+router.delete('/:id', requireAuth, asyncHandler(deleteGroup));
+router.post('/:id/join', requireAuth, asyncHandler(joinGroup));
+router.post('/:id/leave', requireAuth, asyncHandler(leaveGroup));
+router.delete('/:id/members/:username', requireAuth, asyncHandler(removeMember));
+router.post('/:id/manager/:username', requireAuth, asyncHandler(transferOwnership));
 
 module.exports = router;

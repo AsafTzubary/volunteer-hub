@@ -1,5 +1,6 @@
 const Group = require('../models/Group');
 const Event = require('../models/Event');
+const User = require('../models/User');
 
 async function membersByCategory(req, res) {
   const data = await Group.aggregate([
@@ -37,4 +38,9 @@ async function registrationsByMonth(req, res) {
   res.json(data.map(d => ({ year: d._id.year, month: d._id.month, count: d.count })));
 }
 
-module.exports = { membersByCategory, getCategories, registrationsByMonth };
+async function counts(req, res) {
+  const users = await User.countDocuments();
+  res.json({ users });
+}
+
+module.exports = { membersByCategory, getCategories, registrationsByMonth, counts };

@@ -120,16 +120,12 @@ async function init() {
   const session = await loadSession();
   if (!session) return;
 
-  const { username: sessionUsername, role } = session;
+  const { username: sessionUsername } = session;
 
   const profileUrl_ = profileUrl(sessionUsername);
   document.getElementById('my-profile-link').href = profileUrl_;
   document.getElementById('profile-link').href = profileUrl_;
   wireLogout();
-
-  if (role === 'admin') {
-    document.getElementById('admin-panel-btn').classList.remove('d-none');
-  }
 
   const res = await fetch('/api/users/' + encodeURIComponent(sessionUsername));
   if (!res.ok) return;

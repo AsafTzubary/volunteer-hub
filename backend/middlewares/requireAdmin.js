@@ -1,4 +1,5 @@
 const User = require('../models/User');
+const { asyncHandler } = require('./asyncHandler');
 
 async function requireAdmin(req, res, next) {
   if (!req.session.username) {
@@ -11,4 +12,4 @@ async function requireAdmin(req, res, next) {
   next();
 }
 
-module.exports = { requireAdmin };
+module.exports = { requireAdmin: asyncHandler(requireAdmin) };

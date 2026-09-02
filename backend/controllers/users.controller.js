@@ -8,12 +8,55 @@ const {
 
 const USERS_PAGE_SIZE = 9;
 
+// User search parameters:
+//
+//   name        - case-insensitive partial match against either the username
+//                 or the full name. One box covers both on purpose: people
+//                 looking for "dana" rarely know which of the two they are
+//                 remembering.
+//   city        - case-insensitive partial match against the user's city.
+//   interest    - case-insensitive partial match against any one of the
+//                 user's interest tags.
+//   friendsOnly - when set, only the viewer's own friends.
+//   createdFrom - only users who joined on or after this date (ISO string).
+//   createdTo   - only users who joined on or before this date (ISO string).
+//
+// Empty-field behavior: same convention as the group and event searches -
+// any omitted or blank param is left out of the query entirely rather than
+// excluding results.
+//
+// Sorting: username ascending by default. A people directory reads best
+// alphabetically, unlike groups/events where recency is the natural order;
+// `sort=createdAt_desc` gives newest members first.
+//
+// Note: email is deliberately absent from the response. getProfile only
+// reveals it on your own profile, so a directory listing must not become a
+// way around that.
+
 function escapeRegex(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
+// Query params always arrive as strings, so a checkbox-style flag needs an
+// explicit check - otherwise `?friendsOnly=false` reads as "yes".
 function isFlagSet(value) {
   return value === 'true' || value === '1';
+}
+
+const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
+
+// `<input type="date">` submits a bare "YYYY-MM-DD", which parses to midnight.
+// That is what you want from a lower bound, but as an upper bound it would
+// exclude everyone who joined *during* the day the user picked - so "joined
+// to: today", or the same day in both boxes, would come back empty. A bare
+// date used as an upper bound therefore means the end of that day.
+function parseDateBound(value, { endOfDay = false } = {}) {
+  const date = new Date(value);
+  if (isNaN(date)) return null;
+  if (endOfDay && DATE_ONLY.test(String(value).trim())) {
+    date.setUTCHours(23, 59, 59, 999);
+  }
+  return date;
 }
 
 function buildUserSearchFilter(query, viewer) {
@@ -29,6 +72,8 @@ function buildUserSearchFilter(query, viewer) {
     filter.city = { $regex: escapeRegex(city.trim()), $options: 'i' };
   }
 
+  // interests is an array of plain strings, so matching a regex against the
+  // field matches when *any* element matches - no $elemMatch needed.
   if (interest && interest.trim()) {
     filter.interests = { $regex: escapeRegex(interest.trim()), $options: 'i' };
   }
@@ -38,26 +83,25 @@ function buildUserSearchFilter(query, viewer) {
   }
 
   if (createdFrom) {
-    const fromDate = new Date(createdFrom);
-    if (!isNaN(fromDate)) {
-      filter.createdAt = { ...filter.createdAt, $gte: fromDate };
-    }
+    const fromDate = parseDateBound(createdFrom);
+    if (fromDate) filter.createdAt = { ...filter.createdAt, $gte: fromDate };
   }
   if (createdTo) {
-    const toDate = new Date(createdTo);
-    if (!isNaN(toDate)) {
-      toDate.setHours(23, 59, 59, 999);
-      filter.createdAt = { ...filter.createdAt, $lte: toDate };
-    }
+    const toDate = parseDateBound(createdTo, { endOfDay: true });
+    if (toDate) filter.createdAt = { ...filter.createdAt, $lte: toDate };
   }
 
   return filter;
 }
 
+// Every sort ends in a unique field so that skip/limit paging is stable.
+// username is unique on its own; createdAt is not - the seeded accounts share
+// a timestamp to the millisecond - and sorting on it alone lets the same user
+// appear on two pages while another is skipped entirely.
 const USER_SORT_OPTIONS = {
   name_asc: { username: 1 },
   name_desc: { username: -1 },
-  createdAt_desc: { createdAt: -1 },
+  createdAt_desc: { createdAt: -1, _id: -1 },
 };
 
 function resolveUserSort(sortParam) {
@@ -65,6 +109,9 @@ function resolveUserSort(sortParam) {
 }
 
 async function listUsers(req, res) {
+  // The viewer is loaded first because two parts of the response depend on
+  // it: the friendsOnly filter, and the per-user isFriend/isSelf flags the
+  // directory needs to render the right friend button.
   const viewer = await User.findOne({ username: req.session.username })
     .select('friends')
     .lean();
@@ -85,6 +132,8 @@ async function listUsers(req, res) {
     User.countDocuments(filter),
   ]);
 
+  // friends is symmetric (addFriend/removeFriend write both sides), so the
+  // viewer's own list is enough to decide isFriend for everyone listed.
   const friendIds = new Set((viewer.friends || []).map((id) => id.toString()));
 
   res.json({
@@ -97,7 +146,7 @@ async function listUsers(req, res) {
       groupCount: (user.joinedGroups || []).length,
       createdAt: user.createdAt,
       isFriend: friendIds.has(user._id.toString()),
-      isSelf: user._id.toString() === viewer._id.toString(),
+      isSelf: user._id.equals(viewer._id),
     })),
     page,
     totalPages: Math.max(1, Math.ceil(totalCount / USERS_PAGE_SIZE)),

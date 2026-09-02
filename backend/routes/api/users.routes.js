@@ -1,4 +1,5 @@
 const express = require('express');
+const { asyncHandler } = require('../../middlewares/asyncHandler');
 const { requireAuth } = require('../../middlewares/auth');
 const {
   listUsers,
@@ -10,10 +11,10 @@ const {
 
 const router = express.Router();
 
-router.get('/', requireAuth, listUsers);
-router.put('/me', requireAuth, updateProfile);
-router.get('/:username', requireAuth, getProfile);
-router.post('/:username/friend', requireAuth, addFriend);
-router.delete('/:username/friend', requireAuth, removeFriend);
+router.get('/', requireAuth, asyncHandler(listUsers));
+router.put('/me', requireAuth, asyncHandler(updateProfile));
+router.get('/:username', requireAuth, asyncHandler(getProfile));
+router.post('/:username/friend', requireAuth, asyncHandler(addFriend));
+router.delete('/:username/friend', requireAuth, asyncHandler(removeFriend));
 
 module.exports = router;

@@ -38,9 +38,10 @@ async function init() {
 }
 
 async function loadCounts() {
-  const [groupsRes, eventsRes] = await Promise.all([
+  const [groupsRes, eventsRes, countsRes] = await Promise.all([
     fetch('/api/groups'),
     fetch('/api/events/all'),
+    fetch('/api/stats/counts'),
   ]);
 
   if (groupsRes.ok) {
@@ -51,6 +52,13 @@ async function loadCounts() {
   if (eventsRes.ok) {
     const data = await eventsRes.json();
     document.getElementById('kpi-events').textContent = data.length;
+    const totalRsvps = data.reduce((sum, e) => sum + (e.participantsCount || 0), 0);
+    document.getElementById('kpi-rsvps').textContent = totalRsvps;
+  }
+
+  if (countsRes.ok) {
+    const data = await countsRes.json();
+    document.getElementById('kpi-users').textContent = data.users;
   }
 }
 

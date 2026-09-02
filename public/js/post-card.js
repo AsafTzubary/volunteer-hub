@@ -1,6 +1,7 @@
 function postCard(post) {
   const authorName = post.author.fullName || post.author.username;
   const date = new Date(post.createdAt).toLocaleDateString();
+  const edited = post.editedAt ? ' · edited' : '';
   const groupBadge = post.group
     ? `<a href="/group/index.html?id=${encodeURIComponent(post.group.id)}" class="text-muted text-decoration-none small ms-2">${post.group.name}</a>`
     : '';
@@ -14,7 +15,7 @@ function postCard(post) {
           <a href="${profileUrl(post.author.username)}" class="fw-semibold text-decoration-none small">${authorName}</a>
           ${groupBadge}
         </div>
-        <span class="text-muted" style="font-size:0.72rem">${date}</span>
+        <span class="text-muted" style="font-size:0.72rem">${date}${edited}</span>
       </div>
       <p class="mb-0 small">${post.content}</p>
       ${media}

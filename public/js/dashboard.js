@@ -143,6 +143,7 @@ async function init() {
   renderJoinedGroups(user.joinedGroups || []);
 
   document.getElementById('load-more-btn').addEventListener('click', loadMore);
+  wirePostInteractions(document.getElementById('feed-container'));
 
   loadUpcomingEvents();
   await loadFeed();

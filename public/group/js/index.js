@@ -173,35 +173,15 @@ function renderActionButtons(group) {
   }
 }
 
-function postCard(post, canDelete) {
-  const authorName = post.author.fullName || post.author.username;
-  const date = new Date(post.createdAt).toLocaleDateString();
-  const media = post.postType === 'image' && post.imageUrl
-    ? `<img src="${post.imageUrl}" alt="post image" class="img-fluid rounded mt-2" style="max-height:300px" />`
-    : '';
-  return `
-    <div class="border rounded p-3 mb-3" data-post-id="${post.id}">
-      <div class="d-flex justify-content-between align-items-center mb-1">
-        <a href="${profileUrl(post.author.username)}" class="fw-semibold text-decoration-none small">${authorName}</a>
-        <span class="text-muted" style="font-size:0.72rem">${date}</span>
-      </div>
-      <p class="mb-0 small">${post.content}</p>
-      ${media}
-      ${canDelete ? `<button class="btn btn-sm btn-outline-danger delete-post-btn mt-2" data-id="${post.id}">Delete</button>` : ''}
-    </div>
-  `;
-}
-
 function renderPosts(posts, sessionUsername, isManager) {
   const list = document.getElementById('posts-list');
   if (!posts.length) {
-    list.innerHTML = '<p class="text-muted small mb-0">No posts yet.</p>';
+    list.innerHTML = '<p class="text-muted small mb-0 no-posts">No posts yet.</p>';
     return;
   }
-  list.innerHTML = posts.map((post) => postCard(post, isManager || post.author.username === sessionUsername)).join('')
-  list.querySelectorAll('.delete-post-btn').forEach((btn) => {
-  btn.addEventListener('click', () => handleDeletePostClick(btn.dataset.id));
-  });
+  list.innerHTML = posts
+    .map((post) => postCard(post, { canDelete: isManager || post.author.username === sessionUsername }))
+    .join('');
 }
 
 async function loadPosts(groupId, sessionUsername, isManager) {
@@ -402,9 +382,9 @@ function wirePostForm(groupId) {
       return;
     }
     const list = document.getElementById('posts-list');
-    const placeholder = list.querySelector('p.text-muted');
+    const placeholder = list.querySelector('.no-posts');
     if (placeholder) placeholder.remove();
-    list.insertAdjacentHTML('afterbegin', postCard(data, true));
+    list.insertAdjacentHTML('afterbegin', postCard(data, { canDelete: true }));
     this.reset();
   });
 }
@@ -431,10 +411,14 @@ async function refreshMembers(groupId) {
 }
 
 async function init() {
-  const sessionUsername = await loadSession();
-  if (!sessionUsername) return;
+  const session = await loadSession();
+  if (!session) return;
+  const sessionUsername = session.username;
   document.getElementById('my-profile-link').href = profileUrl(sessionUsername);
   wireLogout();
+  wirePostInteractions(document.getElementById('posts-list'), {
+    onDeletePost: handleDeletePostClick,
+  });
   document.getElementById('confirm-delete-btn').addEventListener('click', confirmDelete);
   document.getElementById('confirm-delete-post-btn').addEventListener('click', confirmDeletePost);
   document.getElementById('confirm-transfer-btn').addEventListener('click', confirmTransfer);

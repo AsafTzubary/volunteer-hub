@@ -17,12 +17,21 @@ function wireAddressAutocomplete({ inputId, suggestionsId, confirmedId }) {
     suggestionsList.innerHTML = '';
   }
 
+  function showLookupUnavailable() {
+    suggestionsList.innerHTML =
+      '<li class="list-group-item small text-muted">Address lookup is unavailable right now. You can keep filling in the rest of the form.</li>';
+    suggestionsList.classList.remove('d-none');
+  }
+
   async function selectSuggestion(suggestion) {
     hideSuggestions();
     input.value = suggestion.description;
 
-    const res = await fetch('/api/places/details?placeId=' + encodeURIComponent(suggestion.placeId));
-    if (!res.ok) return;
+    const res = await fetchWithoutErrorPage('/api/places/details?placeId=' + encodeURIComponent(suggestion.placeId));
+    if (!res.ok) {
+      showLookupUnavailable();
+      return;
+    }
 
     const detail = await res.json();
     place = {
@@ -35,8 +44,11 @@ function wireAddressAutocomplete({ inputId, suggestionsId, confirmedId }) {
   }
 
   async function search(query) {
-    const res = await fetch('/api/places/autocomplete?q=' + encodeURIComponent(query));
-    if (!res.ok) return;
+    const res = await fetchWithoutErrorPage('/api/places/autocomplete?q=' + encodeURIComponent(query));
+    if (!res.ok) {
+      showLookupUnavailable();
+      return;
+    }
 
     const { suggestions } = await res.json();
     if (!suggestions.length) {

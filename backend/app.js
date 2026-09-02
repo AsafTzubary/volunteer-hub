@@ -2,9 +2,11 @@ const path = require('path');
 const express = require('express');
 const session = require('express-session');
 const mainRouter = require('./routes');
+const { assignRequestId, errorHandler } = require('./middlewares/errorHandler');
 
 const app = express();
 
+app.use(assignRequestId);
 app.use(express.json({ limit: '10mb' }));
 app.use(
   session({
@@ -24,5 +26,7 @@ app.use((req, res) => {
   }
   res.status(404).sendFile(path.join(__dirname, '..', 'public', '404.html'));
 });
+
+app.use(errorHandler);
 
 module.exports = app;

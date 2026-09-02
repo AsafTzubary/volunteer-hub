@@ -1,12 +1,14 @@
 const express = require('express');
+const { asyncHandler } = require('../../middlewares/asyncHandler');
 const { requireAuth } = require('../../middlewares/auth');
 const { requireAdmin } = require('../../middlewares/requireAdmin');
-const { membersByCategory, getCategories, registrationsByMonth } = require('../../controllers/stats.controller');
+const { membersByCategory, getCategories, registrationsByMonth, counts } = require('../../controllers/stats.controller');
 
 const router = express.Router();
 
-router.get('/categories', requireAuth, getCategories);
-router.get('/members-by-category', requireAdmin, membersByCategory);
-router.get('/registrations-by-month', requireAdmin, registrationsByMonth);
+router.get('/categories', requireAuth, asyncHandler(getCategories));
+router.get('/counts', requireAdmin, asyncHandler(counts));
+router.get('/members-by-category', requireAdmin, asyncHandler(membersByCategory));
+router.get('/registrations-by-month', requireAdmin, asyncHandler(registrationsByMonth));
 
 module.exports = router;

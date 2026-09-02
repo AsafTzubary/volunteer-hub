@@ -34,8 +34,9 @@ function renderEvent(event) {
 }
 
 async function init() {
-  const sessionUsername = await loadSession();
-  if (!sessionUsername) return;
+  const session = await loadSession();
+  if (!session) return;
+  const { username: sessionUsername } = session;
   document.getElementById('my-profile-link').href = profileUrl(sessionUsername);
   wireLogout();
   const eventId = targetEventId();

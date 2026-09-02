@@ -37,6 +37,7 @@ function commentForm() {
 function postCard(post, options) {
   const opts = options || {};
   const authorName = post.author.fullName || post.author.username;
+  const edited = post.editedAt ? ' · edited' : '';
   const groupBadge = post.group
     ? `<a href="/group/index.html?id=${encodeURIComponent(post.group.id)}" class="text-muted text-decoration-none small ms-2">${escapeHtml(post.group.name)}</a>`
     : '';
@@ -50,7 +51,7 @@ function postCard(post, options) {
           <a href="${profileUrl(post.author.username)}" class="fw-semibold text-decoration-none small">${escapeHtml(authorName)}</a>
           ${groupBadge}
         </div>
-        <span class="text-muted" style="font-size:0.72rem">${postDate(post.createdAt)}</span>
+        <span class="text-muted" style="font-size:0.72rem">${postDate(post.createdAt)}${edited}</span>
       </div>
       <p class="mb-0 small">${escapeHtml(post.content)}</p>
       ${media}
@@ -59,6 +60,7 @@ function postCard(post, options) {
         <button type="button" class="btn btn-sm btn-outline-secondary comments-toggle-btn">
           Comments <span class="comment-count">${post.commentsCount || 0}</span>
         </button>
+        ${opts.canEdit ? `<button type="button" class="btn btn-sm btn-outline-secondary edit-post-btn" data-id="${post.id}">Edit</button>` : ''}
         ${opts.canDelete ? `<button type="button" class="btn btn-sm btn-outline-danger delete-post-btn ms-auto" data-id="${post.id}">Delete</button>` : ''}
       </div>
       <p class="post-feedback text-danger small mb-0 mt-1 d-none"></p>
@@ -216,8 +218,12 @@ async function handleDeleteComment(card, btn) {
 }
 
 // One listener per container, so cards rendered later are wired for free.
-// options.onDeletePost lets each page keep its own delete flow (the group page
-// routes it through a confirmation modal; the dashboard has none).
+// options.onDeletePost/onEditPost/onCancelEdit/onSaveEdit let each page keep
+// its own post-management flow (the group page routes delete through a
+// confirmation modal and swaps a card's markup for an edit form; the
+// dashboard offers neither). Swapping a card's inner or outer HTML - e.g. to
+// show the edit form, or to restore the card afterward - never breaks this:
+// the listener lives on the container, not the card.
 function wirePostInteractions(container, options) {
   if (container.dataset.postsWired === 'true') return;
   container.dataset.postsWired = 'true';
@@ -237,12 +243,25 @@ function wirePostInteractions(container, options) {
 
     const deletePostBtn = event.target.closest('.delete-post-btn');
     if (deletePostBtn && opts.onDeletePost) return opts.onDeletePost(deletePostBtn.dataset.id);
+
+    const editPostBtn = event.target.closest('.edit-post-btn');
+    if (editPostBtn && opts.onEditPost) return opts.onEditPost(editPostBtn.dataset.id);
+
+    const cancelEditBtn = event.target.closest('.cancel-edit-btn');
+    if (cancelEditBtn && opts.onCancelEdit) return opts.onCancelEdit(card.dataset.postId);
   });
 
   container.addEventListener('submit', (event) => {
-    const form = event.target.closest('.comment-form');
-    if (!form) return;
-    event.preventDefault();
-    handleCommentSubmit(form.closest('[data-post-id]'), form);
+    const commentForm = event.target.closest('.comment-form');
+    if (commentForm) {
+      event.preventDefault();
+      return handleCommentSubmit(commentForm.closest('[data-post-id]'), commentForm);
+    }
+
+    const editForm = event.target.closest('.post-edit-form');
+    if (editForm && opts.onSaveEdit) {
+      event.preventDefault();
+      return opts.onSaveEdit(editForm.closest('[data-post-id]').dataset.postId);
+    }
   });
 }

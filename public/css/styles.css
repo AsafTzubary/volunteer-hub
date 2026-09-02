@@ -2,6 +2,60 @@ body {
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 }
 
+.category-badge {
+  display: inline-block;
+  background: #e7f3ff;
+  color: #0c63e4;
+  border-radius: 999px;
+  padding: 0.25rem 0.65rem;
+  font-size: 0.78rem;
+}
+
+/* Map page */
+
+.map-panel {
+  height: 520px;
+}
+
+@media (max-width: 991.98px) {
+  .map-panel {
+    height: 320px;
+  }
+}
+
+/* Keeps the map in view while a long event list scrolls past it. */
+@media (min-width: 992px) {
+  .map-sticky {
+    position: sticky;
+    top: 1rem;
+  }
+}
+
+.event-card {
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.event-card:hover {
+  border-color: #0d6efd;
+}
+
+.event-card.is-active {
+  border-color: #0d6efd;
+  box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.15) !important;
+}
+
+.event-card.no-location,
+.event-card.no-location:hover {
+  border-color: transparent;
+  cursor: default;
+}
+
+.map-info-window {
+  max-width: 240px;
+}
+
 .comment-item {
   padding: 0.35rem 0;
   border-bottom: 1px solid #f1f3f5;

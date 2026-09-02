@@ -119,6 +119,7 @@ async function listGroupPosts(req, res) {
       postType: post.postType,
       imageUrl: post.imageUrl,
       createdAt: post.createdAt,
+      editedAt: post.editedAt,
       ...engagement(post, viewer, canInteract(group, viewer, post.author && post.author._id)),
     }))
   );
@@ -181,6 +182,7 @@ async function createPost(req, res) {
     commentsCount: 0,
     likedByMe: false,
     canInteract: true,
+    editedAt: populated.editedAt,
   });
 }
 async function deletePost(req, res) {
@@ -302,6 +304,53 @@ async function deleteComment(req, res) {
   res.json({ message: 'Comment deleted successfully', commentsCount: updated.comments.length });
 }
 
+async function updatePost(req, res) {
+  const { id } = req.params;
+  if (!mongoose.isValidObjectId(id)) return res.status(404).json({ error: 'Post not found.' });
+
+  const post = await Post.findById(id).select('author content imageUrl').lean();
+  if (!post) return res.status(404).json({ error: 'Post not found.' });
+
+  const user = await User.findOne({ username: req.session.username }).select('_id').lean();
+  if (!post.author.equals(user._id)) {
+    return res.status(403).json({ error: 'Only the post author can edit this post.' });
+  }
+
+  const { content, imageData, removeImage } = req.body;
+  const updates = {};
+
+  if (content !== undefined) {
+    const contentError = validatePostContent(content);
+    if (contentError) return res.status(400).json({ error: contentError });
+    if (content.trim() !== post.content) updates.content = content.trim();
+  }
+
+  if (removeImage) {
+    if (post.imageUrl) {
+      updates.postType = 'text';
+      updates.imageUrl = '';
+    }
+  } else if (imageData) {
+    const savedPath = saveBase64Image(imageData);
+    if (!savedPath) return res.status(400).json({ error: 'Invalid image format.' });
+    updates.postType = 'image';
+    updates.imageUrl = savedPath;
+  }
+
+  // A save that changes nothing should not mark the post as edited.
+  const hasChanges = Object.keys(updates).length > 0;
+  if (hasChanges) updates.editedAt = new Date();
+
+  const updated = await (hasChanges
+    ? Post.findByIdAndUpdate(id, { $set: updates }, { new: true })
+    : Post.findById(id))
+    .populate('author', 'username fullName')
+    .populate('group', 'name')
+    .lean();
+
+  res.json(formatPost(updated, user));
+}
+
 const FEED_PAGE_SIZE = 10;
 async function getFeed(req, res) {
   const { before, after } = req.query;
@@ -349,6 +398,7 @@ function formatPost(post, viewer) {
     postType: post.postType,
     imageUrl: post.imageUrl,
     createdAt: post.createdAt,
+    editedAt: post.editedAt || null,
     // Everything the feed query returns is either from a group the viewer
     // joined or from a friend, which is exactly the canInteract rule.
     ...engagement(post, viewer, true),
@@ -358,6 +408,7 @@ function formatPost(post, viewer) {
 module.exports = {
   listGroupPosts,
   createPost,
+  updatePost,
   deletePost,
   getFeed,
   toggleLike,

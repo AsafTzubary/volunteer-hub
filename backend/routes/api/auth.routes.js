@@ -1,11 +1,12 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
+const { asyncHandler } = require('../../middlewares/asyncHandler');
 const User = require('../../models/User');
 const { validateUsername, validatePassword } = require('../../utils/validators');
 
 const router = express.Router();
 
-router.post('/register', async (req, res) => {
+router.post('/register', asyncHandler(async (req, res) => {
   const { username, password } = req.body;
 
   if (!username || !password) {
@@ -32,9 +33,9 @@ router.post('/register', async (req, res) => {
 
   req.session.username = user.username;
   res.status(201).json({ username: user.username });
-});
+}));
 
-router.post('/login', async (req, res) => {
+router.post('/login', asyncHandler(async (req, res) => {
   const { username, password } = req.body;
 
   if (!username || !password) {
@@ -53,15 +54,16 @@ router.post('/login', async (req, res) => {
 
   req.session.username = user.username;
   res.json({ username: user.username });
-});
+}));
 
-router.post('/logout', (req, res) => {
-  req.session.destroy(() => {
+router.post('/logout', (req, res, next) => {
+  req.session.destroy((err) => {
+    if (err) return next(err);
     res.json({ ok: true });
   });
 });
 
-router.get('/me', async (req, res) => {
+router.get('/me', asyncHandler(async (req, res) => {
   if (!req.session.username) {
     return res.status(401).json({ error: 'Not logged in.' });
   }
@@ -70,6 +72,6 @@ router.get('/me', async (req, res) => {
     return res.status(401).json({ error: 'Not logged in.' });
   }
   res.json({ username: user.username, role: user.role, fullName: user.fullName });
-});
+}));
 
 module.exports = router;

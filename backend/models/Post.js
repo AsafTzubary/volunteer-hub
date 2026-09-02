@@ -20,6 +20,7 @@ const postSchema = new mongoose.Schema(
     imageUrl: { type: String, trim: true, default: '' },
     likes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
     comments: [commentSchema],
+    editedAt: { type: Date, default: null },
   },
   { timestamps: true }
 );

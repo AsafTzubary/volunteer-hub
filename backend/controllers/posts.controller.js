@@ -29,11 +29,8 @@ function saveBase64Image(dataUri) {
   return '/uploads/' + filename;
 }
 
-// Who is allowed to like or comment on a post. This deliberately mirrors the
-// visibility rule getFeed() uses (a group you joined OR a post by a friend) so
-// that a post showing up in your feed is always one you can actually react to
-// - otherwise a friend's post from a group you never joined would render with
-// a like button that always 403s.
+// Mirrors getFeed's visibility rule, so anything that shows up in your feed is
+// always something you can react to.
 function canInteract(group, viewer, authorId) {
   if (!viewer) return false;
   if (group) {
@@ -45,8 +42,6 @@ function canInteract(group, viewer, authorId) {
   return (viewer.friends || []).some((friend) => friend.equals(authorId));
 }
 
-// The like/comment fields every post payload carries, so the client can render
-// the buttons in their current state without a second round trip.
 function engagement(post, viewer, interactive) {
   const likes = post.likes || [];
   return {
@@ -77,8 +72,6 @@ function formatComment(comment, post, group, viewer) {
   };
 }
 
-// Every single-post action (like, comment, delete comment) needs the same
-// three documents, so they all load them through here.
 async function loadPostContext(postId, username, options) {
   const withComments = Boolean(options && options.withComments);
   let query = Post.findById(postId).select('author group likes comments');
@@ -203,9 +196,7 @@ async function deletePost(req, res) {
   return res.status(200).json({ message: 'Post deleted successfully' });
 }
 
-// Likes are a plain array of user ids, so toggling is a $pull or an $addToSet
-// rather than a read-modify-write of the whole array - two rapid clicks (or two
-// open tabs) can't end up pushing the same user twice.
+// $pull/$addToSet instead of a read-modify-write, so double-clicking can't add the same like twice.
 async function toggleLike(req, res) {
   const { id } = req.params;
   if (!mongoose.isValidObjectId(id)) return res.status(404).json({ error: 'Post not found.' });
@@ -228,9 +219,6 @@ async function toggleLike(req, res) {
   res.json({ id, likesCount: updated.likes.length, likedByMe: !alreadyLiked });
 }
 
-// Comments are readable by anyone signed in, matching listGroupPosts - someone
-// browsing a group page they haven't joined can read the discussion, they just
-// can't join it (canInteract gates that).
 async function listComments(req, res) {
   const { id } = req.params;
   if (!mongoose.isValidObjectId(id)) return res.status(404).json({ error: 'Post not found.' });
@@ -399,8 +387,6 @@ function formatPost(post, viewer) {
     imageUrl: post.imageUrl,
     createdAt: post.createdAt,
     editedAt: post.editedAt || null,
-    // Everything the feed query returns is either from a group the viewer
-    // joined or from a friend, which is exactly the canInteract rule.
     ...engagement(post, viewer, true),
   };
 }

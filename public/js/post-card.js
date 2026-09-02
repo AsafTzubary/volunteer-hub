@@ -1,10 +1,4 @@
 // Shared post card, used by both the dashboard feed and the group page.
-//
-// Likes and comments are wired through a single delegated listener per
-// container (see wirePostInteractions) rather than per card, so posts added
-// later - a new post, a page of "load more", a poll result - are interactive
-// straight away without re-binding anything. Every action is a fetch that
-// patches the affected card in place; nothing here reloads the page.
 
 const COMMENT_MAX_LENGTH = 500;
 
@@ -185,8 +179,6 @@ async function handleCommentSubmit(card, form) {
   input.value = '';
   setCommentCount(card, data.commentsCount);
 
-  // If the earlier list fetch failed we have nothing to append to, so pull the
-  // whole thread instead of leaving the new comment invisible.
   const section = card.querySelector('.comments-section');
   if (section.dataset.loaded === 'true') {
     appendComment(card, data.comment);
@@ -217,13 +209,7 @@ async function handleDeleteComment(card, btn) {
   if (!list.querySelector('[data-comment-id]')) list.innerHTML = NO_COMMENTS_MARKUP;
 }
 
-// One listener per container, so cards rendered later are wired for free.
-// options.onDeletePost/onEditPost/onCancelEdit/onSaveEdit let each page keep
-// its own post-management flow (the group page routes delete through a
-// confirmation modal and swaps a card's markup for an edit form; the
-// dashboard offers neither). Swapping a card's inner or outer HTML - e.g. to
-// show the edit form, or to restore the card afterward - never breaks this:
-// the listener lives on the container, not the card.
+// One listener per container, so cards added later are wired for free.
 function wirePostInteractions(container, options) {
   if (container.dataset.postsWired === 'true') return;
   container.dataset.postsWired = 'true';

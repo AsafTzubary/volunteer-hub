@@ -224,10 +224,6 @@ function renderPostCard(post) {
   return postCard(post, { canDelete: canDeletePost(post), canEdit: canEditPost(post) });
 }
 
-// Replaces a single card's markup in place. No re-wiring is needed afterward:
-// likes/comments/delete/edit are all handled by the one delegated listener on
-// #posts-list (see wirePostInteractions), which keeps working after a child's
-// outerHTML is swapped out from under it.
 function showPostCard(post) {
   postCardEl(post.id).outerHTML = renderPostCard(post);
 }

@@ -138,11 +138,6 @@ function validateRsvpStatus(status) {
   return null;
 }
 
-// Task 112: profile fields (fullName, email, city, interests) used to be
-// validated with one-off inline checks inside users.controller.js instead of
-// going through this shared module like every other create/update form does.
-// These four bring updateProfile in line with the rest of the app.
-
 function validateFullName(fullName) {
   if (typeof fullName !== 'string' || fullName.trim().length > FULL_NAME_MAX_LENGTH) {
     return `Full name must be ${FULL_NAME_MAX_LENGTH} characters or fewer.`;

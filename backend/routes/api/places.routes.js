@@ -1,5 +1,6 @@
 const https = require('https');
 const express = require('express');
+const { asyncHandler } = require('../../middlewares/asyncHandler');
 const { requireAuth } = require('../../middlewares/auth');
 
 const router = express.Router();
@@ -17,7 +18,14 @@ function httpsGet(url) {
   });
 }
 
-router.get('/autocomplete', requireAuth, async (req, res) => {
+// The Maps JavaScript API runs in the browser, so unlike the calls below the
+// key cannot be proxied. Returns null when unset so the map page can fall back
+// to a list-only view.
+router.get('/maps-key', requireAuth, (req, res) => {
+  res.json({ key: process.env.GOOGLE_MAPS_API_KEY || null });
+});
+
+router.get('/autocomplete', requireAuth, asyncHandler(async (req, res) => {
   const { q } = req.query;
   if (!q || q.trim().length < 2) {
     return res.json({ suggestions: [] });
@@ -39,9 +47,9 @@ router.get('/autocomplete', requireAuth, async (req, res) => {
   }));
 
   res.json({ suggestions });
-});
+}));
 
-router.get('/details', requireAuth, async (req, res) => {
+router.get('/details', requireAuth, asyncHandler(async (req, res) => {
   const { placeId } = req.query;
   if (!placeId) {
     return res.status(400).json({ error: 'placeId is required.' });
@@ -62,6 +70,6 @@ router.get('/details', requireAuth, async (req, res) => {
     latitude: result.geometry.location.lat,
     longitude: result.geometry.location.lng,
   });
-});
+}));
 
 module.exports = router;

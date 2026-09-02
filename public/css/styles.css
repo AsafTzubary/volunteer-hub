@@ -55,3 +55,17 @@ body {
 .map-info-window {
   max-width: 240px;
 }
+
+.comment-item {
+  padding: 0.35rem 0;
+  border-bottom: 1px solid #f1f3f5;
+}
+
+.comment-item:last-child {
+  border-bottom: none;
+}
+
+.comments-section {
+  border-top: 1px solid #f1f3f5;
+  padding-top: 0.5rem;
+}

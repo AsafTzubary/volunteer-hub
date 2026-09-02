@@ -189,32 +189,6 @@ function canDeletePost(post) {
   return postsContext.isManager || canEditPost(post);
 }
 
-function postCard(post, canDelete, canEdit) {
-  const authorName = post.author.fullName || post.author.username;
-  const date = new Date(post.createdAt).toLocaleDateString();
-  const edited = post.editedAt ? ' · edited' : '';
-  const media = post.postType === 'image' && post.imageUrl
-    ? `<img src="${post.imageUrl}" alt="post image" class="img-fluid rounded mt-2" style="max-height:300px" />`
-    : '';
-  const actions = canEdit || canDelete
-    ? `<div class="d-flex gap-2 mt-2">
-        ${canEdit ? `<button class="btn btn-sm btn-outline-secondary edit-post-btn" data-id="${post.id}">Edit</button>` : ''}
-        ${canDelete ? `<button class="btn btn-sm btn-outline-danger delete-post-btn" data-id="${post.id}">Delete</button>` : ''}
-      </div>`
-    : '';
-  return `
-    <div class="border rounded p-3 mb-3" data-post-id="${post.id}">
-      <div class="d-flex justify-content-between align-items-center mb-1">
-        <a href="${profileUrl(post.author.username)}" class="fw-semibold text-decoration-none small">${authorName}</a>
-        <span class="text-muted" style="font-size:0.72rem">${date}${edited}</span>
-      </div>
-      <p class="mb-0 small">${post.content}</p>
-      ${media}
-      ${actions}
-    </div>
-  `;
-}
-
 function postEditForm(post) {
   const currentImage = post.postType === 'image' && post.imageUrl
     ? `
@@ -247,33 +221,29 @@ function postCardEl(postId) {
 }
 
 function renderPostCard(post) {
-  return postCard(post, canDeletePost(post), canEditPost(post));
+  return postCard(post, { canDelete: canDeletePost(post), canEdit: canEditPost(post) });
 }
 
+// Replaces a single card's markup in place. No re-wiring is needed afterward:
+// likes/comments/delete/edit are all handled by the one delegated listener on
+// #posts-list (see wirePostInteractions), which keeps working after a child's
+// outerHTML is swapped out from under it.
 function showPostCard(post) {
   postCardEl(post.id).outerHTML = renderPostCard(post);
-  wirePostCard(postCardEl(post.id));
-}
-
-function wirePostCard(card) {
-  const editBtn = card.querySelector('.edit-post-btn');
-  if (editBtn) editBtn.addEventListener('click', () => startEditPost(editBtn.dataset.id));
-  const deleteBtn = card.querySelector('.delete-post-btn');
-  if (deleteBtn) deleteBtn.addEventListener('click', () => handleDeletePostClick(deleteBtn.dataset.id));
 }
 
 function startEditPost(postId) {
   const post = findPost(postId);
-  const card = postCardEl(postId);
-  card.innerHTML = postEditForm(post);
-  card.querySelector('.cancel-edit-btn').addEventListener('click', () => showPostCard(post));
-  card.querySelector('.post-edit-form').addEventListener('submit', function (e) {
-    e.preventDefault();
-    saveEditPost(post, card);
-  });
+  postCardEl(postId).innerHTML = postEditForm(post);
 }
 
-async function saveEditPost(post, card) {
+function cancelEditPost(postId) {
+  showPostCard(findPost(postId));
+}
+
+async function saveEditPost(postId) {
+  const post = findPost(postId);
+  const card = postCardEl(postId);
   const errorEl = card.querySelector('.edit-post-error');
   errorEl.classList.add('d-none');
 
@@ -310,11 +280,10 @@ function renderPosts(posts) {
   currentPosts = posts;
   const list = document.getElementById('posts-list');
   if (!posts.length) {
-    list.innerHTML = '<p class="text-muted small mb-0">No posts yet.</p>';
+    list.innerHTML = '<p class="text-muted small mb-0 no-posts">No posts yet.</p>';
     return;
   }
   list.innerHTML = posts.map((post) => renderPostCard(post)).join('');
-  list.querySelectorAll('[data-post-id]').forEach((card) => wirePostCard(card));
 }
 
 async function loadPosts(groupId, sessionUsername, isManager) {
@@ -516,11 +485,10 @@ function wirePostForm(groupId) {
       return;
     }
     const list = document.getElementById('posts-list');
-    const placeholder = list.querySelector('p.text-muted');
+    const placeholder = list.querySelector('.no-posts');
     if (placeholder) placeholder.remove();
     currentPosts.unshift(data);
     list.insertAdjacentHTML('afterbegin', renderPostCard(data));
-    wirePostCard(list.firstElementChild);
     this.reset();
   });
 }
@@ -552,6 +520,12 @@ async function init() {
   const { username: sessionUsername } = session;
   document.getElementById('my-profile-link').href = profileUrl(sessionUsername);
   wireLogout();
+  wirePostInteractions(document.getElementById('posts-list'), {
+    onDeletePost: handleDeletePostClick,
+    onEditPost: startEditPost,
+    onCancelEdit: cancelEditPost,
+    onSaveEdit: saveEditPost,
+  });
   document.getElementById('confirm-delete-btn').addEventListener('click', confirmDelete);
   document.getElementById('confirm-delete-post-btn').addEventListener('click', confirmDeletePost);
   document.getElementById('confirm-transfer-btn').addEventListener('click', confirmTransfer);

@@ -37,6 +37,15 @@ function profileUrl(username) {
   return '/profile/index.html?username=' + encodeURIComponent(username);
 }
 
+function escapeHtml(value) {
+  return String(value == null ? '' : value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 function isAdmin(session) {
   return session && session.role === 'admin';
 }

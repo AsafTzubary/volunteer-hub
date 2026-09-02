@@ -12,6 +12,7 @@ const CATEGORY_MAX_LENGTH = 40;
 const ADDRESS_MAX_LENGTH = 120;
 
 const POST_CONTENT_MAX_LENGTH = 2000;
+const COMMENT_CONTENT_MAX_LENGTH = 500;
 
 const EVENT_TITLE_MIN_LENGTH = 3;
 const EVENT_TITLE_MAX_LENGTH = 100;
@@ -94,6 +95,16 @@ function validatePostContent(content) {
   }
   if (content.trim().length > POST_CONTENT_MAX_LENGTH) {
     return `Post content must be at most ${POST_CONTENT_MAX_LENGTH} characters.`;
+  }
+  return null;
+}
+
+function validateCommentContent(content) {
+  if (typeof content !== 'string' || content.trim().length === 0) {
+    return 'Comment content is required.';
+  }
+  if (content.trim().length > COMMENT_CONTENT_MAX_LENGTH) {
+    return `Comment must be at most ${COMMENT_CONTENT_MAX_LENGTH} characters.`;
   }
   return null;
 }
@@ -182,6 +193,7 @@ module.exports = {
   GROUP_DESCRIPTION_MAX_LENGTH,
   CATEGORY_MAX_LENGTH,
   ADDRESS_MAX_LENGTH,
+  COMMENT_CONTENT_MAX_LENGTH,
   EVENT_TITLE_MIN_LENGTH,
   EVENT_TITLE_MAX_LENGTH,
   EVENT_DESCRIPTION_MAX_LENGTH,
@@ -201,6 +213,7 @@ module.exports = {
   validateLatitude,
   validateLongitude,
   validatePostContent,
+  validateCommentContent,
   validateEventTitle,
   validateEventDescription,
   validateEventDate,
